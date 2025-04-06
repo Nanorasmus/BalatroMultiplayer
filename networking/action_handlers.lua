@@ -152,7 +152,9 @@ local function action_enemy_info(player_id, enemy_id, score_str, hands_left_str,
 	local lives = tonumber(lives_str)
 
 	if MP.GAME.enemies[player_id] == nil then
-		MP.GAME.enemies[player_id] = {}
+		MP.GAME.enemies[player_id] = {
+			highest_score = MP.INSANE_INT.empty(),
+		}
 	end
 
 	if score == nil or hands_left == nil then

@@ -153,6 +153,10 @@ function MP.UI.create_UIBox_mods_list(player_id)
 end
 
 function MP.UI.create_UIBox_player_row(player_id)
+	if player_id == "house" then
+		return nil
+	end
+
 	local player_name = MP.LOBBY.players[player_id].username
 	if player_id == MP.LOBBY.player_id then
 		player_name = player_name

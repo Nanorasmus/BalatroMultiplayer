@@ -136,9 +136,14 @@ function create_UIBox_blind_choice(type, run_info)
 
 		if G.GAME.round_resets.blind_choices[type] == "bl_mp_nemesis" then
 			-- Get nemesis highscore or question marks
-			if MP.LOBBY.enemy_id and MP.GAME.enemies[MP.LOBBY.enemy_id] then
+			if MP.LOBBY.config.nano_br_mode == "nemesis" and MP.LOBBY.enemy_id and MP.GAME.enemies[MP.LOBBY.enemy_id] then
 				loc_name = MP.LOBBY.players[MP.LOBBY.enemy_id].username
 				blind_amt = MP.INSANE_INT.to_string(MP.GAME.enemies[MP.LOBBY.enemy_id].highest_score)
+			elseif MP.LOBBY.config.nano_br_mode == "potluck" then
+				loc_name = localize("k_potluck")
+				if MP.GAME.enemies["house"] then
+					blind_amt = MP.INSANE_INT.to_string(MP.GAME.enemies["house"].highest_score)
+				end
 			else
 				blind_amt = "???"
 			end
@@ -607,7 +612,28 @@ G.FUNCS.pvp_ready_button = function(e)
 end
 
 local function update_blind_HUD()
-	if MP.LOBBY.code and MP.LOBBY.enemy_id then
+	if MP.LOBBY.code and MP.LOBBY.config.nano_br_mode == "potluck" then
+		G.HUD_blind.alignment.offset.y = -10
+		G.E_MANAGER:add_event(Event({
+			trigger = "after",
+			delay = 0.3,
+			blockable = false,
+			func = function()
+				G.HUD_blind:get_UIE_by_ID("HUD_blind_count").config.ref_table = MP.GAME.enemies["house"]
+				G.HUD_blind:get_UIE_by_ID("HUD_blind_count").config.ref_value = "score_text"
+				G.HUD_blind:get_UIE_by_ID("HUD_blind_count").config.func = "multiplayer_blind_chip_UI_scale"
+				G.HUD_blind:get_UIE_by_ID("HUD_blind").children[2].children[2].children[2].children[1].children[1].config.text =
+					localize("k_enemy_score")
+				G.HUD_blind:get_UIE_by_ID("HUD_blind").children[2].children[2].children[2].children[3].children[1].config.text =
+					localize("k_enemy_hands")
+				G.HUD_blind:get_UIE_by_ID("dollars_to_be_earned").config.object.config.string =
+					{ { ref_table = MP.GAME.enemies["house"], ref_value = "hands" } }
+				G.HUD_blind:get_UIE_by_ID("dollars_to_be_earned").config.object:update_text()
+				G.HUD_blind.alignment.offset.y = 0
+				return true
+			end,
+		}))
+	elseif MP.LOBBY.code and MP.LOBBY.enemy_id then
 		G.HUD_blind.alignment.offset.y = -10
 		G.E_MANAGER:add_event(Event({
 			trigger = "after",
@@ -684,11 +710,16 @@ function Game:update_draw_to_hand(dt)
 							delay = 0.45,
 							blockable = false,
 							func = function()
-								G.HUD_blind:get_UIE_by_ID("HUD_blind_name").config.object.config.string = {
+								G.HUD_blind:get_UIE_by_ID("HUD_blind_name").config.object.config.string = MP.LOBBY.config.nano_br_mode == "nemesis" and {
 									{
 										ref_table = MP.LOBBY.players[MP.LOBBY.enemy_id],
 										ref_value = "username",
 									},
+								} or {
+									{
+										ref_table = { name = localize("k_potluck") },
+										ref_value = "name",
+									}
 								}
 								G.HUD_blind:get_UIE_by_ID("HUD_blind_name").config.object:update_text()
 								G.HUD_blind:get_UIE_by_ID("HUD_blind_name").config.object:pop_in(0)
@@ -812,6 +843,8 @@ local function eval_hand_and_jokers()
 	end
 end
 
+local sendingHand = false
+
 local update_hand_played_ref = Game.update_hand_played
 ---@diagnostic disable-next-line: duplicate-set-field
 function Game:update_hand_played(dt)
@@ -842,14 +875,18 @@ function Game:update_hand_played(dt)
 		self.shop = nil
 	end
 
-	if MP.LOBBY.enemy_id and not G.STATE_COMPLETE then
+	if not G.STATE_COMPLETE then
 		G.STATE_COMPLETE = true
 		G.E_MANAGER:add_event(Event({
 			trigger = "immediate",
 			func = function()
 				-- Set blind chips to enemy score
-				if G.GAME.blind and MP.GAME.enemies[MP.LOBBY.enemy_id] then
-					G.GAME.blind.chip_text = MP.INSANE_INT.to_string(MP.GAME.enemies[MP.LOBBY.enemy_id].score)
+				if G.GAME.blind then
+					if MP.GAME.enemies["house"] then
+						G.GAME.blind.chip_text = MP.INSANE_INT.to_string(MP.GAME.enemies["house"].score)
+					elseif MP.GAME.enemies[MP.LOBBY.enemy_id] then
+						G.GAME.blind.chip_text = MP.INSANE_INT.to_string(MP.GAME.enemies[MP.LOBBY.enemy_id].score)
+					end
 				end
 				-- For now, never advance to next round
 				if G.GAME.current_round.hands_left < 1 then
@@ -1699,18 +1736,28 @@ function Blind:disable()
 end
 
 G.FUNCS.multiplayer_blind_chip_UI_scale = function(e)
-	if not MP.LOBBY.enemy_id or not MP.GAME.enemies[MP.LOBBY.enemy_id] then
-		return
-	end
+	if MP.LOBBY.config.nano_br_mode == "nemesis" then
+		if not MP.LOBBY.enemy_id or not MP.GAME.enemies[MP.LOBBY.enemy_id] then
+			return
+		end
 
-	if not MP.GAME.enemies[MP.LOBBY.enemy_id].score then
-		return
-	end
-	
-	local new_score_text = MP.INSANE_INT.to_string(MP.GAME.enemies[MP.LOBBY.enemy_id].score)
-	if G.GAME.blind and MP.GAME.enemies[MP.LOBBY.enemy_id].score_text ~= new_score_text then
-		-- e.config.scale = scale_number(MP.GAME.enemies[MP.LOBBY.enemy_id].score, 0.7, 100000)
-		MP.GAME.enemies[MP.LOBBY.enemy_id].score_text = new_score_text
+		if not MP.GAME.enemies[MP.LOBBY.enemy_id].score then
+			return
+		end
+		
+		local new_score_text = MP.INSANE_INT.to_string(MP.GAME.enemies[MP.LOBBY.enemy_id].score)
+		if G.GAME.blind and MP.GAME.enemies[MP.LOBBY.enemy_id].score_text ~= new_score_text then
+			MP.GAME.enemies[MP.LOBBY.enemy_id].score_text = new_score_text
+		end
+	elseif MP.LOBBY.config.nano_br_mode == "potluck" then
+		if not MP.GAME.enemies["house"].score then
+			return
+		end
+		
+		local new_score_text = MP.INSANE_INT.to_string(MP.GAME.enemies["house"].score)
+		if G.GAME.blind and MP.GAME.enemies["house"].score_text ~= new_score_text then
+			MP.GAME.enemies["house"].score_text = new_score_text
+		end
 	end
 end
 

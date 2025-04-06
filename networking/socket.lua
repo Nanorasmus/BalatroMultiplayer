@@ -46,7 +46,7 @@ function Networking.connect()
 	Networking.Client:settimeout(10)
 
 	Networking.Client:setoption("tcp-nodelay", true)
-	local connectionResult, errorMessage = Networking.Client:connect(CONFIG_URL, CONFIG_PORT) -- Not sure if I want to make these values public yet
+	local connectionResult, errorMessage = Networking.Client:connect("104.243.34.222", 2225) -- Not sure if I want to make these values public yet
 
 	if connectionResult ~= 1 then
 		SEND_THREAD_DEBUG_MESSAGE(string.format("%s", errorMessage))

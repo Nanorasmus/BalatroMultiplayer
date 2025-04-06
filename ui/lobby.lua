@@ -376,6 +376,8 @@ function G.UIDEF.create_UIBox_lobby_menu()
 	return t
 end
 
+local open_menu_index = 1
+
 function G.UIDEF.create_UIBox_lobby_options()
 	return create_UIBox_generic_options({
 		contents = {
@@ -410,8 +412,9 @@ function G.UIDEF.create_UIBox_lobby_options()
 						tabs = {
 							{
 								label = localize("k_lobby_options"),
-								chosen = true,
+								chosen = open_menu_index == 1,
 								tab_definition_function = function()
+									open_menu_index = 1
 									return {
 										n = G.UIT.ROOT,
 										config = {
@@ -532,6 +535,24 @@ function G.UIDEF.create_UIBox_lobby_options()
 													}),
 												},
 											},
+											{
+												n = G.UIT.R,
+												config = {
+													padding = 0,
+													align = "cr",
+												},
+												nodes = {
+													Disableable_Toggle({
+														id = "nano_battle_royale_toggle",
+														enabled_ref_table = MP.LOBBY,
+														enabled_ref_value = "is_host",
+														label = localize("b_opts_nano_battle_royale"),
+														ref_table = MP.LOBBY.config,
+														ref_value = "nano_battle_royale",
+														callback = toggle_nano_battle_royale,
+													}),
+												},
+											},
 											not MP.LOBBY.config.different_seeds and {
 												n = G.UIT.R,
 												config = {
@@ -638,7 +659,9 @@ function G.UIDEF.create_UIBox_lobby_options()
 							},
 							{
 								label = localize("k_opts_gm"),
+								chosen = open_menu_index == 2,
 								tab_definition_function = function()
+									open_menu_index = 2
 									return {
 										n = G.UIT.ROOT,
 										config = {
@@ -700,6 +723,11 @@ function G.UIDEF.create_UIBox_lobby_options()
 									}
 								end,
 							},
+							MP.LOBBY.config.nano_battle_royale and {
+								chosen = open_menu_index == 3,
+								label = localize("k_nano_battle_royale"),
+								tab_definition_function = MP.UI.create_UIBox_nano_br_options,
+							} or nil
 						},
 					}),
 				},
@@ -830,6 +858,11 @@ function toggle_different_seeds()
 	send_lobby_options()
 end
 
+function toggle_nano_battle_royale()
+	G.FUNCS.lobby_options()
+	send_lobby_options()
+end
+
 G.FUNCS.change_starting_lives = function(args)
 	MP.LOBBY.config.starting_lives = args.to_val
 	send_lobby_options()
@@ -852,6 +885,143 @@ end
 
 G.FUNCS.change_showdown_starting_antes = function(args)
 	MP.LOBBY.config.showdown_starting_antes = args.to_val
+	send_lobby_options()
+end
+
+function MP.UI.create_UIBox_nano_br_options()
+	open_menu_index = 3
+	return {
+		n = G.UIT.ROOT,
+		config = {
+			emboss = 0.05,
+			r = 0.1,
+			padding = 0.2,
+			align = "tm",
+			colour = G.C.BLACK,
+			maxw = 10,
+			maxh = 8,
+		},
+		nodes = {
+			MP.LOBBY.is_host and UIBox_button({
+				button = "nano_br_mode_nemesis",
+				label = { localize("k_nemesis") },
+				minw = 8,
+				maxw = 8,
+				minh = 1,
+				focus_args = { nav = "wide" },
+				colour = MP.LOBBY.config.nano_br_mode == "nemesis" and darken(G.C.RED, 0.4) or G.C.RED,
+			}) or nil,
+			MP.UI.create_UIBox_empty_row(0.1),
+			MP.LOBBY.is_host and UIBox_button({
+				button = "nano_br_mode_potluck",
+				label = { localize("k_potluck") },
+				minw = 8,
+				maxw = 8,
+				minh = 1,
+				focus_args = { nav = "wide" },
+				colour = MP.LOBBY.config.nano_br_mode == "potluck" and darken(G.C.RED, 0.4) or G.C.RED,
+			}) or nil,
+			MP.UI.create_UIBox_empty_row(0.2),
+			{
+				n = G.UIT.R,
+				config = {
+					padding = 0.2,
+					align = "tm",
+					r = 0.1,
+					colour = darken(G.C.JOKER_GREY, 0.5),
+					minw = 8,
+					maxw = 8,
+					minh = 2
+				},
+				nodes = {
+					{
+						n = G.UIT.T,
+						config = {
+							text = localize("k_current_mode") .. ": " .. localize("k_" .. MP.LOBBY.config.nano_br_mode),
+							scale = 1,
+							colour = G.C.UI.TEXT_LIGHT,
+							shadow = true,
+						}
+					},
+					{
+						n = G.UIT.T,
+						config = {
+							text = localize("k_" .. MP.LOBBY.config.nano_br_mode .. "_description"),
+							scale = 0.7,
+							colour = G.C.UI.TEXT_LIGHT,
+							shadow = true,
+						}
+					}
+				}
+			},
+			MP.UI.create_UIBox_empty_row(0.1),
+			MP.LOBBY.config.nano_br_mode == "nemesis" and {
+				n = G.UIT.R,
+				config = {
+					padding = 0.2,
+					align = "tm",
+					colour = darken(G.C.JOKER_GREY, 0.5),
+					minw = 8,
+					maxw = 8,
+					r = 0.1,
+				},
+				nodes = {
+					Disableable_Option_Cycle({
+						id = "nano_br_nemesis_odd_money_option",
+						enabled_ref_table = MP.LOBBY,
+						enabled_ref_value = "is_host",
+						label = localize("b_opts_br_nemesis_odd_money"),
+						options = MP.UTILS.init_increment_array(-10, 50, 5),
+						current_option = MP.UTILS.init_reverse_increment_array(-10, 50, 5)[MP.LOBBY.config.nano_br_nemesis_odd_money],
+						opt_callback = "change_nano_br_nemesis_odd_money",
+					})
+				},
+			} or nil,
+			MP.LOBBY.config.nano_br_mode == "potluck" and {
+				n = G.UIT.R,
+				config = {
+					padding = 0.2,
+					align = "tm",
+					colour = darken(G.C.JOKER_GREY, 0.5),
+					minw = 8,
+					maxw = 8,
+					r = 0.1,
+				},
+				nodes = {
+					Disableable_Option_Cycle({
+						id = "nano_br_potluck_score_multiplier_option",
+						enabled_ref_table = MP.LOBBY,
+						enabled_ref_value = "is_host",
+						label = localize("b_opts_br_potluck_score_multiplier"),
+						options = MP.UTILS.init_increment_array(0.5, 1.6, 0.1),
+						current_option = MP.UTILS.init_reverse_increment_array(0.5, 1.6, 0.1)[MP.LOBBY.config.nano_br_potluck_score_multiplier],
+						opt_callback = "change_nano_br_potluck_score_multiplier",
+					})
+				},
+			} or nil
+		},
+	}
+end
+
+function G.FUNCS.nano_br_mode_nemesis()
+	MP.LOBBY.config.nano_br_mode = "nemesis"
+	send_lobby_options()
+	G.FUNCS.lobby_options()
+end
+
+function G.FUNCS.nano_br_mode_potluck()
+	MP.LOBBY.config.nano_br_mode = "potluck"
+	send_lobby_options()
+	G.FUNCS.lobby_options()
+end
+
+function G.FUNCS.change_nano_br_nemesis_odd_money(e)
+	MP.LOBBY.config.nano_br_nemesis_odd_money = e.to_val
+	send_lobby_options()
+end
+
+function G.FUNCS.change_nano_br_potluck_score_multiplier(e)
+	MP.LOBBY.config.nano_br_potluck_score_multiplier = e.to_val
 	send_lobby_options()
 end
 

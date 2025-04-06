@@ -22,6 +22,10 @@ MP.LOBBY = {
 		sleeve = "sleeve_casl_none",
 		stake = 1,
 		multiplayer_jokers = true,
+		nano_battle_royale = true,
+		nano_br_mode = "nemesis",
+		nano_br_nemesis_odd_money = 0,
+		nano_br_potluck_score_multiplier = 1.0,
 	},
 	deck = {
 		back = "Red Deck",
@@ -122,6 +126,19 @@ function MP.reset_game_states()
 			spent_last_shop = 0,
 		}
 	end
+
+	MP.GAME.enemies["house"] = {
+		enemy_id = nil,
+		score = MP.INSANE_INT.empty(),
+		highest_score = MP.INSANE_INT.empty(),
+		score_text = "0",
+		hands = 4,
+		location = "Always winning",
+		skips = 0,
+		lives = 4,
+		sells = 0,
+		spent_last_shop = 0,
+	}
 end
 
 MP.reset_game_states()
