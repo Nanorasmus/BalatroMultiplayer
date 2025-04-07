@@ -384,6 +384,7 @@ function G.UIDEF.create_UIBox_lobby_options()
 			{
 				n = G.UIT.R,
 				config = {
+					id = "lobby_options_menu",
 					padding = 0,
 					align = "cm",
 				},

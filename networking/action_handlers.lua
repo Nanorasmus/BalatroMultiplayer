@@ -311,6 +311,11 @@ local function action_lobby_options(options)
 			if config_uie then
 				G.FUNCS.toggle(config_uie)
 			end
+
+			local lobby_options = G.OVERLAY_MENU:get_UIE_by_ID("lobby_options_menu")
+			if lobby_options then
+				G.FUNCS.lobby_options();
+			end
 		end
 		::continue::
 	end
