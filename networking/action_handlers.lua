@@ -304,7 +304,7 @@ local function action_lobby_options(options)
 		if lobby_option_numbers[k] then
 			parsed_v = tonumber(v)
 		end
-		
+
 		MP.LOBBY.config[k] = parsed_v
 		if G.OVERLAY_MENU then
 			local config_uie = G.OVERLAY_MENU:get_UIE_by_ID(k .. "_toggle")
@@ -371,6 +371,8 @@ local function enemyLocation(options)
 
 	if value == "bl_mp_nemesis" and MP.LOBBY.players[options.playerId] and MP.GAME.enemies[options.playerId].enemy_id and MP.LOBBY.players[MP.GAME.enemies[options.playerId].enemy_id] then
 		value = MP.LOBBY.players[MP.GAME.enemies[options.playerId].enemy_id].username
+	elseif value == "bl_mp_potluck" then
+		value = localize("k_potluck")
 	else
 		loc_name = localize({ type = "name_text", key = value, set = "Blind" })
 		if loc_name ~= "ERROR" then

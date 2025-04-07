@@ -10,7 +10,7 @@ target = '=[SMODS AntePreview "main.lua"]'
 pattern = "local tag = prediction[choice].tag"
 position = 'before'
 payload = '''
-if prediction[choice].blind == "bl_mp_nemesis" then
+if prediction[choice].blind == "bl_mp_nemesis" or prediction[choice].blind == "bl_mp_potluck" then
     blind_amt = "????"
 end
 '''

@@ -5,7 +5,11 @@ if next(SMODS.find_mod("AntePreview")) then
         local predictions = predict_next_ante_ref()
         if MP.LOBBY.code then
             if G.GAME.round_resets.ante > 1 then
-                predictions.Boss.blind = "bl_mp_nemesis"
+                if MP.LOBBY.config.nano_br_mode == "nemesis" then
+                    predictions.Boss.blind = "bl_mp_nemesis"
+                elseif MP.LOBBY.config.nano_br_mode == "potluck" then
+                    predictions.Boss.blind = "bl_mp_potluck"
+                end
             end
         end
         return predictions

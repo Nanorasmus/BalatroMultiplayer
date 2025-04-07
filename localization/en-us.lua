@@ -124,6 +124,13 @@ return {
 					"most chips wins",
 				},
 			},
+			bl_mp_potluck = {
+				name = "Potluck",
+				text = {
+					"Face all players,",
+					"beat the average score to win",
+				},
+			},
 		},
 		Edition = {
 			e_mp_phantom = {
@@ -235,6 +242,7 @@ return {
 			k_nemesis_description = "Face your Nemesis,\nbeat their score to win",
 			k_potluck = "Potluck",
 			k_potluck_description = "Face all players,\nbeat the average score to win",
+			k_pvp_last_score = "Last blind's score",
 			k_connect_player = "Connected Players:",
 			k_opts_only_host = "Only the Lobby Host can change these options",
 			k_opts_gm = "Gamemode Modifiers",

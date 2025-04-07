@@ -47,7 +47,7 @@ function create_UIBox_blind_choice(type, run_info)
 				pseudorandom_element(_poker_hands, pseudoseed("orbital"))
 		end
 
-		if G.GAME.round_resets.blind_choices[type] == "bl_mp_nemesis" then
+		if G.GAME.round_resets.blind_choices[type] == "bl_mp_nemesis" or G.GAME.round_resets.blind_choices[type] == "bl_mp_potluck" then
 			local dt1 = DynaText({
 				string = { { string = localize("k_bl_life"), colour = G.C.FILTER } },
 				colours = { G.C.BLACK },
@@ -134,22 +134,24 @@ function create_UIBox_blind_choice(type, run_info)
 			* blind_choice.config.mult
 			* G.GAME.starting_params.ante_scaling
 
+		local text_table = loc_target
+
 		if G.GAME.round_resets.blind_choices[type] == "bl_mp_nemesis" then
 			-- Get nemesis highscore or question marks
 			if MP.LOBBY.config.nano_br_mode == "nemesis" and MP.LOBBY.enemy_id and MP.GAME.enemies[MP.LOBBY.enemy_id] then
 				loc_name = MP.LOBBY.players[MP.LOBBY.enemy_id].username
 				blind_amt = MP.INSANE_INT.to_string(MP.GAME.enemies[MP.LOBBY.enemy_id].highest_score)
-			elseif MP.LOBBY.config.nano_br_mode == "potluck" then
-				loc_name = localize("k_potluck")
-				if MP.GAME.enemies["house"] then
-					blind_amt = MP.INSANE_INT.to_string(MP.GAME.enemies["house"].highest_score)
-				end
+			else
+				blind_amt = "???"
+			end
+		elseif MP.LOBBY.config.nano_br_mode == "potluck" then
+			loc_name = localize("k_potluck")			
+			if MP.GAME.enemies["house"] and MP.GAME.enemies["house"].highest_score and MP.GAME.enemies["house"].highest_score.coeffiocient > 0 then
+				blind_amt = MP.INSANE_INT.to_string(MP.GAME.enemies["house"].highest_score)
 			else
 				blind_amt = "???"
 			end
 		end
-
-		local text_table = loc_target
 
 		local blind_state = G.GAME.round_resets.blind_states[type]
 		local _reward = true
@@ -209,7 +211,7 @@ function create_UIBox_blind_choice(type, run_info)
 										shadow = true,
 										hover = true,
 										one_press = true,
-										func = G.GAME.round_resets.blind_choices[type] == "bl_mp_nemesis"
+										func = (G.GAME.round_resets.blind_choices[type] == "bl_mp_nemesis" or G.GAME.round_resets.blind_choices[type] == "bl_mp_potluck")
 												and "pvp_ready_button"
 											or nil,
 										button = "select_blind",
@@ -388,7 +390,7 @@ function create_UIBox_blind_choice(type, run_info)
 														{
 															n = G.UIT.T,
 															config = {
-																text = localize("ph_blind_score_at_least"),
+																text = localize("k_pvp_last_score"),
 																scale = 0.3,
 																colour = disabled and G.C.UI.TEXT_INACTIVE or G.C.WHITE,
 																shadow = not disabled,
@@ -1683,7 +1685,11 @@ function reset_blinds()
 	reset_blinds_ref()
 	if MP.LOBBY.code then
 		if G.GAME.round_resets.ante > 1 then
-			G.GAME.round_resets.blind_choices.Boss = "bl_mp_nemesis"
+			if MP.LOBBY.config.nano_br_mode == "nemesis" then
+				G.GAME.round_resets.blind_choices.Boss = "bl_mp_nemesis"
+			elseif MP.LOBBY.config.nano_br_mode == "potluck" then
+				G.GAME.round_resets.blind_choices.Boss = "bl_mp_potluck"
+			end
 		end
 	end
 end
