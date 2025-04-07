@@ -300,11 +300,11 @@ local function action_lobby_options(options)
 		elseif v == "false" then
 			parsed_v = false
 		end
-		print("Test1: " .. k .. " " .. v)
+
 		if lobby_option_numbers[k] then
-			print("Test2")
 			parsed_v = tonumber(v)
 		end
+		
 		MP.LOBBY.config[k] = parsed_v
 		if G.OVERLAY_MENU then
 			local config_uie = G.OVERLAY_MENU:get_UIE_by_ID(k .. "_toggle")
