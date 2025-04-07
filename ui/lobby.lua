@@ -932,7 +932,7 @@ function MP.UI.create_UIBox_nano_br_options()
 					colour = darken(G.C.JOKER_GREY, 0.5),
 					minw = 8,
 					maxw = 8,
-					minh = 2
+					minh = 1
 				},
 				nodes = {
 					{
@@ -956,7 +956,7 @@ function MP.UI.create_UIBox_nano_br_options()
 				}
 			},
 			MP.UI.create_UIBox_empty_row(0.1),
-			MP.LOBBY.config.nano_br_mode == "nemesis" and {
+			MP.LOBBY.config.nano_br_mode == "nemesis" and false and {
 				n = G.UIT.R,
 				config = {
 					padding = 0.2,
@@ -967,15 +967,15 @@ function MP.UI.create_UIBox_nano_br_options()
 					r = 0.1,
 				},
 				nodes = {
-					-- Disableable_Option_Cycle({
-					-- 	id = "nano_br_nemesis_odd_money_option",
-					-- 	enabled_ref_table = MP.LOBBY,
-					-- 	enabled_ref_value = "is_host",
-					-- 	label = localize("b_opts_br_nemesis_odd_money"),
-					-- 	options = MP.UTILS.init_increment_array(-10, 50, 5),
-					-- 	current_option = MP.UTILS.init_reverse_increment_array(-10, 50, 5)[MP.LOBBY.config.nano_br_nemesis_odd_money],
-					-- 	opt_callback = "change_nano_br_nemesis_odd_money",
-					-- })
+					Disableable_Option_Cycle({
+						id = "nano_br_nemesis_odd_money_option",
+						enabled_ref_table = MP.LOBBY,
+						enabled_ref_value = "is_host",
+						label = localize("b_opts_br_nemesis_odd_money"),
+						options = MP.UTILS.init_increment_array(-10, 50, 5),
+						current_option = MP.UTILS.init_reverse_increment_array(-10, 50, 5)[MP.LOBBY.config.nano_br_nemesis_odd_money],
+						opt_callback = "change_nano_br_nemesis_odd_money",
+					})
 				},
 			} or nil,
 			MP.LOBBY.config.nano_br_mode == "potluck" and {
