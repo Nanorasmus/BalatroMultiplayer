@@ -277,6 +277,16 @@ local function action_lose_game()
 	G.STATE = G.STATES.GAME_OVER
 end
 
+-- The list of lobby option keys to parse to numbers (Reversed for easy lookup of key existance)
+local lobby_option_numbers = MP.UTILS.reverse_key_value_pairs({
+	"starting_lives",
+	"starting_money_modifier",
+	"starting_hand_modifier",
+	"starting_discard_modifier",
+	"nano_br_nemesis_odd_money",
+	"nano_br_potluck_score_multiplier",
+})
+
 local function action_lobby_options(options)
 	local different_decks_before = MP.LOBBY.config.different_decks
 	for k, v in pairs(options) do
@@ -290,7 +300,9 @@ local function action_lobby_options(options)
 		elseif v == "false" then
 			parsed_v = false
 		end
-		if k == "starting_lives" or k == "starting_money_modifier" or k == "starting_hand_modifier" or k == "starting_discard_modifier" then
+		print("Test1: " .. k .. " " .. v)
+		if lobby_option_numbers[k] then
+			print("Test2")
 			parsed_v = tonumber(v)
 		end
 		MP.LOBBY.config[k] = parsed_v
