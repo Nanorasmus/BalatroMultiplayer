@@ -394,7 +394,18 @@ function MP.UTILS.reverse_key_value_pairs(tbl)
 end
 
 -- Same as init_increment_array, but reversed key-value pairs, useful for lookups
-function MP.UTILS.init_reverse_increment_array(min, max, step)
+function MP.UTILS.init_reverse_increment_array(min, max, step, stringify_keys)
 	local range_array = MP.UTILS.init_increment_array(min, max, step)
-	return MP.UTILS.reverse_key_value_pairs(range_array)
+	local reversed = MP.UTILS.reverse_key_value_pairs(range_array);
+
+	if stringify_keys then
+		local stringified = {}
+		for k, v in pairs(reversed) do
+			stringified[tostring(k)] = v
+		end
+		
+		return stringified
+	end
+
+	return reversed
 end

@@ -994,7 +994,7 @@ function MP.UI.create_UIBox_nano_br_options()
 						enabled_ref_value = "is_host",
 						label = localize("b_opts_br_potluck_score_multiplier"),
 						options = MP.UTILS.init_increment_array(0.5, 1.6, 0.1),
-						current_option = MP.UTILS.init_reverse_increment_array(0.5, 1.6, 0.1)[MP.LOBBY.config.nano_br_potluck_score_multiplier],
+						current_option = MP.UTILS.init_reverse_increment_array(0.5, 1.6, 0.1, true)[tostring(MP.LOBBY.config.nano_br_potluck_score_multiplier)],
 						opt_callback = "change_nano_br_potluck_score_multiplier",
 					})
 				},
