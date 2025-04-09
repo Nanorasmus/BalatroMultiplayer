@@ -303,6 +303,7 @@ local lobby_option_numbers = MP.UTILS.reverse_key_value_pairs({
 
 local function action_lobby_options(options)
 	local different_decks_before = MP.LOBBY.config.different_decks
+	local br_mode_before = MP.LOBBY.config.nano_br_mode
 	for k, v in pairs(options) do
 		if k == "ruleset" then
 			MP.LOBBY.config.ruleset = v
@@ -340,6 +341,117 @@ local function action_lobby_options(options)
 	if not MP.LOBBY.is_started then
 		MP.ACTIONS.update_player_usernames() -- render new DECK button state
 	end
+
+	if br_mode_before ~= MP.LOBBY.config.nano_br_mode then
+		-- Handle mode switching
+		if MP.LOBBY.config.nano_br_mode == "hivemind" then
+			MP.ACTIONS.send_deck_type()
+		end
+	end
+end
+
+local function action_set_deck_type(back, sleeve, stake)
+	if MP.LOBBY.config.different_decks then
+		MP.LOBBY.deck.back = back
+		MP.LOBBY.deck.sleeve = sleeve
+		MP.LOBBY.deck.stake = tonumber(stake)
+
+
+		-- Refresh UI
+		if G.MAIN_MENU_UI then
+			G.MAIN_MENU_UI:remove()
+		end
+
+		G.FUNCS.display_lobby_main_menu_UI()
+
+		
+		if G.OVERLAY_MENU then
+			-- If a menu is open
+			local lobby_options = G.OVERLAY_MENU:get_UIE_by_ID("lobby_options_menu")
+
+			-- And that menu is NOT lobby options
+			if not lobby_options then
+				G.FUNCS.exit_overlay_menu()
+			end
+		end
+	end
+end
+
+local function action_set_deck(deck_str)
+	MP.GAME.setting_deck = true
+	-- Clear current deck
+	for _, card in ipairs(G.deck.cards) do
+		card:remove_from_deck()
+		card.area:remove_card(card)
+		card:remove()
+	end
+	G.deck.cards = {}
+
+	for _, card in ipairs(G.discard.cards) do
+		print("Removing from discard")
+		card:remove_from_deck()
+		card.area:remove_card(card)
+		card:remove()
+	end
+	G.discard.cards = {}
+
+	for _, card in ipairs(G.hand.cards) do
+		print("Removing from hand")
+		card:remove_from_deck()
+		card.area:remove_card(card)
+		card:remove()
+	end
+	G.hand.cards = {}
+
+	for _, card in ipairs(G.play.cards) do
+		print("Removing from play")
+		card:remove_from_deck()
+		card.area:remove_card(card)
+		card:remove()
+	end
+	G.play.cards = {}
+
+	-- Clear cards
+	for _, card in ipairs(G.playing_cards) do
+		card:remove_from_deck()
+		card.area:remove_card(card)
+		card:remove()
+	end
+	G.playing_cards = {}
+
+
+	-- Add new cards
+	local card_strings = MP.UTILS.string_split(deck_str, "|")
+
+	for _, card_str in pairs(card_strings) do
+		if card_str == "" then
+			goto continue
+		end
+		local card_params = MP.UTILS.string_split(card_str, "-")
+
+		print(card_params[1], card_params[2], card_params[3], card_params[4], card_params[5])
+
+		local _suit = card_params[1]
+		local _rank = card_params[2]
+		
+		local enhancement = card_params[3]
+		local edition = card_params[4]
+		local seal = card_params[5]
+
+		local card = create_playing_card({front = G.P_CARDS[_suit..'_'.._rank], center = (enhancement == "none" and nil or G.P_CENTERS[enhancement])}, G.deck, true, true, nil, false)
+
+		if edition ~= "none" then
+			card:set_edition(edition, true, true)
+		end
+		if seal ~= "none" then
+			card:set_seal(seal, true, true)
+		end
+		
+		::continue::
+	end
+
+	MP.GAME.setting_deck = false
+	print("Done!")
 end
 
 local function action_send_phantom(key)
@@ -600,7 +712,6 @@ local function action_set_score(score)
 		blockable = false,
 		blocking = false,
 		func = function()
-			print(score_waiting == true and "SCORE WAITING" or "SCORE NOT WAITING")
 			if score_waiting == true then
 				if not (G.STATE == G.STATES.SELECTING_HAND or G.STATE == G.STATES.HAND_PLAYED or G.STATE == G.STATES.DRAW_TO_HAND) then
 					score_waiting = false
@@ -608,6 +719,7 @@ local function action_set_score(score)
 				return false
 			end
 
+			print(G.STATE)
 			if not (G.STATE == G.STATES.SELECTING_HAND or G.STATE == G.STATES.HAND_PLAYED or G.STATE == G.STATES.DRAW_TO_HAND) then
 				return true
 			end
@@ -701,7 +813,6 @@ local function action_skip_blind()
 		return
 	end
 
-	print("action_skip_blind-1: ", current_blind_id)
 	local blind
 	if current_blind_id == "Small" then
 		blind = G.blind_select_opts.small
@@ -709,7 +820,6 @@ local function action_skip_blind()
 		blind = G.blind_select_opts.big
 	end
 
-	print("action_skip_blind-2: ", blind == nil and "FALSE" or "TRUE")
 
 	if blind == nil then
 		return
@@ -870,6 +980,74 @@ function MP.ACTIONS.lobby_options()
 	Client.send(msg)
 end
 
+
+function MP.ACTIONS.send_deck_type()
+	local back = MP.LOBBY.config.different_decks and MP.LOBBY.deck.back or MP.LOBBY.config.back
+	local sleeve = MP.LOBBY.config.different_decks and MP.LOBBY.deck.sleeve or MP.LOBBY.config.sleeve
+	local stake = MP.LOBBY.config.different_decks and MP.LOBBY.deck.stake or MP.LOBBY.config.stake
+
+	Client.send(string.format("action:sendDeckType,back:%s,sleeve:%s,stake:%s", back, sleeve, stake))
+end
+
+-- Pre-compile a reversed list of all the centers
+local reversed_centers = nil
+
+local function card_to_string(card)
+	if not card or not card.base or not card.base.suit or not card.base.value then
+		return ""
+	end
+
+	if not reversed_centers then
+		reversed_centers = MP.UTILS.reverse_key_value_pairs(G.P_CENTERS)
+	end
+
+	local suit = card.base.suit
+	local rank = card.base.value
+
+	local enhancement = reversed_centers[card.config.center] or "none"
+	local edition = card.edition or "none"
+	local seal = card.seal or "none"
+
+	return suit .. "-" .. rank .. "-" .. enhancement .. "-" .. edition .. "-" .. seal
+end
+
+function MP.ACTIONS.send_deck()
+
+	-- Gather all cards into a single string
+	local deck_str = ""
+	for _, card in ipairs(G.playing_cards) do
+		if deck_str ~= "" then
+			deck_str = deck_str .. "|"
+		end
+
+		deck_str = deck_str .. card_to_string(card)
+	end
+	print("Done!")
+
+	Client.send(string.format("action:sendDeck,deck:%s", deck_str))
+end
+
+function MP.ACTIONS.set_card_suit(card, suit)
+	Client.send(string.format("action:setCardSuit,card:%s,suit:%s", card_to_string(card), suit))
+end
+
+function MP.ACTIONS.set_card_rank(card, rank)
+	Client.send(string.format("action:setCardRank,card:%s,rank:%s", card_to_string(card), rank))
+end
+
+function MP.ACTIONS.set_card_enhancement(card, enhancement)
+	Client.send(string.format("action:setCardEnhancement,card:%s,enhancement:%s", card_to_string(card), enhancement))
+end
+
+function MP.ACTIONS.set_card_edition(card, edition)
+	Client.send(string.format("action:setCardEdition,card:%s,edition:%s", card_to_string(card), edition))
+end
+
+function MP.ACTIONS.set_card_seal(card, seal)
+	Client.send(string.format("action:setCardSeal,card:%s,seal:%s", card_to_string(card), seal))
+end
+
+
 function MP.ACTIONS.set_ante(ante)
 	Client.send(string.format("action:setAnte,ante:%d", ante))
 end
@@ -1011,6 +1189,10 @@ function Game:update(dt)
 				action_lobby_options(parsedAction)
 			elseif parsedAction.action == "enemyLocation" then
 				enemyLocation(parsedAction)
+			elseif parsedAction.action == "setDeckType" then
+				action_set_deck_type(parsedAction.back, parsedAction.sleeve, parsedAction.stake)
+			elseif parsedAction.action == "setDeck" then
+				action_set_deck(parsedAction.deck)
 			elseif parsedAction.action == "sendPhantom" then
 				action_send_phantom(parsedAction.key)
 			elseif parsedAction.action == "removePhantom" then

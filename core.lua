@@ -115,6 +115,7 @@ function MP.reset_game_states()
 		pre_calc_score = 0,
 		calculating_hand = false,
 		score_offset = 0,
+		setting_deck = false,
 	}
 
 	MP.GAME.enemies = {}

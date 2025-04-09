@@ -1122,6 +1122,18 @@ function Game:start_run(args)
 	hud_ante.children[2].children[4] = nil
 
 	self.HUD:recalculate()
+
+	-- Send deck to ante if playing hivemind
+	if MP.LOBBY.config.nano_br_mode == "hivemind" then
+		G.E_MANAGER:add_event(Event({
+			trigger = "after",
+			delay = 0.2,
+			func = function()
+				MP.ACTIONS.send_deck()
+				return true
+			end
+		}))
+	end
 end
 
 local create_UIBox_game_over_ref = create_UIBox_game_over

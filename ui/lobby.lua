@@ -1155,6 +1155,9 @@ G.FUNCS.start_run = function(e, args)
 			MP.LOBBY.deck.back = (args.deck and args.deck.name) or G.GAME.viewed_back.name
 			MP.LOBBY.deck.stake = chosen_stake
 			MP.LOBBY.deck.sleeve = G.viewed_sleeve
+			if MP.LOBBY.config.nano_br_mode == "hivemind" then
+				MP.ACTIONS.send_deck_type()
+			end
 			MP.ACTIONS.update_player_usernames()
 		else
 			local back = args.challenge
