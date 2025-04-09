@@ -131,6 +131,13 @@ return {
 					"beat the average score to win",
 				},
 			},
+			bl_mp_hivemind = {
+				name = "Hive Battle",
+				text = {
+					"Face enemy hive,",
+					"beat the enemy hive's score",
+				},
+			},
 		},
 		Edition = {
 			e_mp_phantom = {
@@ -192,6 +199,7 @@ return {
 			b_copy_clipboard = "Copy to clipboard",
 			b_view_code = "VIEW CODE",
 			b_leave = "LEAVE",
+			b_send_money = "SEND",
 			b_opts_cb_money = "Give comeback $ on life loss",
 			b_opts_no_gold_on_loss = "Don't get blind rewards on round loss",
 			b_opts_death_on_loss = "Lose a life on non-PvP round loss",
@@ -206,6 +214,7 @@ return {
 			b_opts_br_mode = "PVP Mode",
 			b_opts_br_nemesis_odd_money = "No Nemesis PVP Money",
 			b_opts_br_potluck_score_multiplier = "Potluck Score Multiplier",
+			b_opts_br_hivemind_team_selection = "Select a hive",
 			b_opts_player_diff_deck = "Players have different decks",
 			b_reset = "Reset",
 			b_set_custom_seed = "Set Custom Seed",
@@ -242,6 +251,8 @@ return {
 			k_nemesis_description = "Face your Nemesis,\nbeat their score to win",
 			k_potluck = "Potluck",
 			k_potluck_description = "Face all players,\nbeat the average score to win",
+			k_hivemind = "Hivemind",
+			k_hivemind_description = "Become one with the hive,\nbeat enemy hive's score to win",
 			k_pvp_last_score = "Last blind's score",
 			k_connect_player = "Connected Players:",
 			k_opts_only_host = "Only the Lobby Host can change these options",

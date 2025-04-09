@@ -183,10 +183,26 @@ function MP.UI.create_UIBox_player_row(player_id)
 
 	-- Get inferred values
 	local is_highest_scorer = MP.GAME.global_highest_score and highest_score and MP.INSANE_INT.empty() ~= highest_score and (highest_score == MP.GAME.global_highest_score or MP.INSANE_INT.greater_than(highest_score, MP.GAME.global_highest_score))
+	
+	local is_teams_based = MP.LOBBY.config.nano_br_mode == "hivemind"
+	local is_teammate = false
+	if is_teams_based and MP.LOBBY.players[player_id] and MP.LOBBY.players[player_id].team_id == MP.LOBBY.team_id then
+		is_teammate = true
+	end
 
 	-- Get entry color
 	local color = darken(G.C.JOKER_GREY, 0.1)
-	if MP.LOBBY.is_started then
+	if MP.LOBBY.config.nano_br_mode == "hivemind" and MP.LOBBY.players[player_id] and G.C[MP.LOBBY.players[player_id].team_id] then
+		-- Get team color
+		color = G.C[MP.LOBBY.players[player_id].team_id]
+
+		if player_id == MP.LOBBY.player_id then
+			color = lighten(color, 0.2)
+		elseif lives and lives <= 0 then
+			color = darken(color, 0.5)
+		end
+
+	elseif MP.LOBBY.is_started then
 		if player_id == MP.LOBBY.player_id then
 			color = G.C.BLUE
 		elseif player_id == MP.LOBBY.enemy_id then
@@ -195,6 +211,10 @@ function MP.UI.create_UIBox_player_row(player_id)
 
 		if lives and lives <= 0 then
 			color = darken(color, 0.5)
+		end
+	else 
+		if player_id == MP.LOBBY.player_id then
+			color = G.C.BLUE
 		end
 	end
 
@@ -325,6 +345,24 @@ function MP.UI.create_UIBox_player_row(player_id)
 				},
 			},
 				
+			MP.LOBBY.is_started and is_teammate and MP.UI.Disableable_Button({
+				id = "send_money_to_" .. player_id,
+				button = "send_money_to_player",
+				button_args = { player_id = player_id },
+				colour = G.C.GOLD,
+				label = { localize("b_send_money") .. " $" .. (5 - MP.LOBBY.config.nano_br_hivemind_transfer_tax) .. " ($5)" },
+				scale = 0.45,
+				minw = 2.5,
+				minh = 0.45,
+				
+				col = true,
+				enabled_ref_table = { enabled = player_id ~= MP.LOBBY.player_id and G.GAME.dollars >= 5 },
+				enabled_ref_value = "enabled",
+			}) or MP.LOBBY.is_started and {
+				n = G.UIT.C,
+				config = { align = "cm", colour = G.C.CLEAR, r = 0.1, minw = 2.5 }
+			} or nil,
+				
 			MP.LOBBY.is_host and MP.UI.Disableable_Button({
 				id = "kick_" .. player_id,
 				button = "lobby_kick_player",
@@ -341,6 +379,16 @@ function MP.UI.create_UIBox_player_row(player_id)
 			}) or nil,
 		},
 	}
+end
+
+function G.FUNCS.send_money_to_player(e)
+	local player_id = e.config.button_args.player_id
+
+	if player_id and G.GAME.dollars >= 5 then
+		ease_dollars(-5, true)
+		
+		MP.ACTIONS.send_money_to_player(player_id, 5 - MP.LOBBY.config.nano_br_hivemind_transfer_tax)
+	end
 end
 
 function G.FUNCS.lobby_kick_player(e)
@@ -440,7 +488,7 @@ function ease_round(mod)
 end
 
 function G.FUNCS.mp_timer_button(e)
-	if not MP.GAME.timer_started and MP.GAME.ready_blind then
+	if not MP.GAME.timer_started and MP.GAME.ready_blind and G.GAME.round_resets.blind_states['Boss'] == 'Current' then
 		MP.ACTIONS.start_ante_timer()
 	end
 end
@@ -510,7 +558,7 @@ function G.FUNCS.set_timer_box(e)
 		e.children[1].config.object.colours = { G.C.IMPORTANT }
 		return
 	end
-	if not MP.GAME.timer_started and MP.GAME.ready_blind then
+	if not MP.GAME.timer_started and MP.GAME.ready_blind and G.GAME.round_resets.blind_states['Boss'] == 'Current' then
 		e.config.colour = G.C.IMPORTANT
 		e.children[1].config.object.colours = { G.C.UI.TEXT_LIGHT }
 		return

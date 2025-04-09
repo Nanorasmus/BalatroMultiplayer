@@ -41,7 +41,7 @@ MP.INSANE_INT.to_string = function(insane_int_display)
     end
 
     if insane_int_display.exponent == 0 then
-        return e .. number_format(insane_int_display.coeffiocient, 1000000)
+        return e .. number_format(insane_int_display.coeffiocient, 10000)
     end
 
     return e .. insane_int_display.coeffiocient .. "e" .. number_format(insane_int_display.exponent, 1000000)
@@ -59,4 +59,41 @@ MP.INSANE_INT.greater_than = function(insane_int_display1, insane_int_display2)
     end
 
     return tonumber(insane_int_display1.coeffiocient) > tonumber(insane_int_display2.coeffiocient)
+end
+
+MP.INSANE_INT.add = function(insane_int_display1, insane_int_display2)
+    local starting_e_count
+    local coeffiocient
+    local exponent
+
+    local myStartingECount = insane_int_display1.e_count
+    local myCoefficient = insane_int_display1.coeffiocient
+    local myExponent = insane_int_display1.exponent
+
+    local otherStartingECount = insane_int_display2.e_count
+    local otherCoefficient = insane_int_display2.coeffiocient
+    local otherExponent = insane_int_display2.exponent
+
+    if myStartingECount > otherStartingECount then
+        otherExponent = (otherExponent / math.pow(10, (myStartingECount - otherStartingECount)))
+        starting_e_count = myStartingECount
+    elseif myStartingECount < otherStartingECount then
+        myExponent = (myExponent / math.pow(10, (otherStartingECount - myStartingECount)))
+        starting_e_count = otherStartingECount
+    else
+        starting_e_count = myStartingECount
+    end
+
+    if myExponent > otherExponent then
+        coeffiocient = (otherCoefficient / math.pow(10, (myExponent - otherExponent))) + myCoefficient
+        exponent = myExponent
+    elseif myExponent < otherExponent then
+        coeffiocient = (myCoefficient / math.pow(10, (otherExponent - myExponent))) + otherCoefficient
+        exponent = otherExponent
+    else
+        coeffiocient = myCoefficient + otherCoefficient
+        exponent = myExponent
+    end
+
+    return MP.INSANE_INT.create(coeffiocient, exponent, starting_e_count)
 end

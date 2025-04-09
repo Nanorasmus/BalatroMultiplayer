@@ -9,6 +9,8 @@ if next(SMODS.find_mod("AntePreview")) then
                     predictions.Boss.blind = "bl_mp_nemesis"
                 elseif MP.LOBBY.config.nano_br_mode == "potluck" then
                     predictions.Boss.blind = "bl_mp_potluck"
+                elseif MP.LOBBY.config.nano_br_mode == "hivemind" then
+                    predictions.Boss.blind = "bl_mp_hivemind"
                 end
             end
         end

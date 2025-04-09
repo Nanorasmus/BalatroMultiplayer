@@ -26,6 +26,7 @@ MP.LOBBY = {
 		nano_br_mode = "nemesis",
 		nano_br_nemesis_odd_money = 0,
 		nano_br_potluck_score_multiplier = 1.0,
+		nano_br_hivemind_transfer_tax = 1,
 	},
 	deck = {
 		back = "Red Deck",
@@ -35,6 +36,7 @@ MP.LOBBY = {
 	username = "Guest",
 	player_id = "",
 	enemy_id = nil,
+	team_id = "RED",
 	players = {},
 	player_count = 0,
 	is_host = false,
@@ -96,6 +98,7 @@ function MP.reset_game_states()
 		comeback_bonus_given = true,
 		comeback_bonus = 0,
 		end_pvp = false,
+		can_blind_end = false,
 		enemies = {}, 
 		location = "loc_selecting",
 		next_blind_context = nil,
@@ -108,6 +111,10 @@ function MP.reset_game_states()
 		global_highest_score = MP.INSANE_INT.empty(),
 		timer = 120,
 		timer_started = false,
+		last_score = 0,
+		pre_calc_score = 0,
+		calculating_hand = false,
+		score_offset = 0,
 	}
 
 	MP.GAME.enemies = {}
@@ -127,6 +134,7 @@ function MP.reset_game_states()
 		}
 	end
 
+	-- Used for enemy scores not owned by a particular player
 	MP.GAME.enemies["house"] = {
 		enemy_id = nil,
 		score = MP.INSANE_INT.empty(),

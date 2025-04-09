@@ -922,6 +922,16 @@ function MP.UI.create_UIBox_nano_br_options()
 				focus_args = { nav = "wide" },
 				colour = MP.LOBBY.config.nano_br_mode == "potluck" and darken(G.C.RED, 0.4) or G.C.RED,
 			}) or nil,
+			MP.UI.create_UIBox_empty_row(0.1),
+			MP.LOBBY.is_host and UIBox_button({
+				button = "nano_br_mode_hivemind",
+				label = { localize("k_hivemind") },
+				minw = 8,
+				maxw = 8,
+				minh = 1,
+				focus_args = { nav = "wide" },
+				colour = MP.LOBBY.config.nano_br_mode == "hivemind" and darken(G.C.RED, 0.4) or G.C.RED,
+			}) or nil,
 			MP.UI.create_UIBox_empty_row(0.2),
 			{
 				n = G.UIT.R,
@@ -999,7 +1009,27 @@ function MP.UI.create_UIBox_nano_br_options()
 						opt_callback = "change_nano_br_potluck_score_multiplier",
 					})
 				},
-			} or nil
+			} or nil,
+			MP.LOBBY.config.nano_br_mode == "hivemind" and {
+				n = G.UIT.R,
+				config = {
+					padding = 0.2,
+					align = "tm",
+					colour = darken(G.C.JOKER_GREY, 0.5),
+					minw = 8,
+					maxw = 8,
+					r = 0.1,
+				},
+				nodes = {
+					create_option_cycle({
+						id = "nano_br_hivemind_team_option",
+						label = localize("b_opts_br_hivemind_team_selection"),
+						options = {"RED", "BLUE"},
+						current_option = MP.UTILS.reverse_key_value_pairs({"RED", "BLUE"})[MP.LOBBY.team_id],
+						opt_callback = "change_nano_br_hivemind_team",
+					})
+				},
+			} or nil,
 		},
 	}
 end
@@ -1016,6 +1046,12 @@ function G.FUNCS.nano_br_mode_potluck()
 	G.FUNCS.lobby_options()
 end
 
+function G.FUNCS.nano_br_mode_hivemind()
+	MP.LOBBY.config.nano_br_mode = "hivemind"
+	send_lobby_options()
+	G.FUNCS.lobby_options()
+end
+
 function G.FUNCS.change_nano_br_nemesis_odd_money(e)
 	MP.LOBBY.config.nano_br_nemesis_odd_money = e.to_val
 	send_lobby_options()
@@ -1024,6 +1060,11 @@ end
 function G.FUNCS.change_nano_br_potluck_score_multiplier(e)
 	MP.LOBBY.config.nano_br_potluck_score_multiplier = e.to_val
 	send_lobby_options()
+end
+
+function G.FUNCS.change_nano_br_hivemind_team(e)
+	MP.LOBBY.team_id = tostring(e.to_val)
+	MP.ACTIONS.set_team(e.to_val)
 end
 
 function G.FUNCS.get_lobby_main_menu_UI(e)

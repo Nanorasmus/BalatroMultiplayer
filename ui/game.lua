@@ -47,7 +47,7 @@ function create_UIBox_blind_choice(type, run_info)
 				pseudorandom_element(_poker_hands, pseudoseed("orbital"))
 		end
 
-		if G.GAME.round_resets.blind_choices[type] == "bl_mp_nemesis" or G.GAME.round_resets.blind_choices[type] == "bl_mp_potluck" then
+		if G.GAME.round_resets.blind_choices[type] == "bl_mp_nemesis" or G.GAME.round_resets.blind_choices[type] == "bl_mp_potluck" or G.GAME.round_resets.blind_choices[type] == "bl_mp_hivemind" then
 			local dt1 = DynaText({
 				string = { { string = localize("k_bl_life"), colour = G.C.FILTER } },
 				colours = { G.C.BLACK },
@@ -144,8 +144,15 @@ function create_UIBox_blind_choice(type, run_info)
 			else
 				blind_amt = "???"
 			end
-		elseif MP.LOBBY.config.nano_br_mode == "potluck" then
+		elseif G.GAME.round_resets.blind_choices[type] == "bl_mp_potluck" then
 			loc_name = localize("k_potluck")			
+			if MP.GAME.enemies["house"] and MP.GAME.enemies["house"].highest_score and MP.GAME.enemies["house"].highest_score.coeffiocient > 0 then
+				blind_amt = MP.INSANE_INT.to_string(MP.GAME.enemies["house"].highest_score)
+			else
+				blind_amt = "???"
+			end
+		elseif G.GAME.round_resets.blind_choices[type] == "bl_mp_hivemind" then
+			loc_name = localize("k_hivemind")
 			if MP.GAME.enemies["house"] and MP.GAME.enemies["house"].highest_score and MP.GAME.enemies["house"].highest_score.coeffiocient > 0 then
 				blind_amt = MP.INSANE_INT.to_string(MP.GAME.enemies["house"].highest_score)
 			else
@@ -211,7 +218,7 @@ function create_UIBox_blind_choice(type, run_info)
 										shadow = true,
 										hover = true,
 										one_press = true,
-										func = (G.GAME.round_resets.blind_choices[type] == "bl_mp_nemesis" or G.GAME.round_resets.blind_choices[type] == "bl_mp_potluck")
+										func = (G.GAME.round_resets.blind_choices[type] == "bl_mp_nemesis" or G.GAME.round_resets.blind_choices[type] == "bl_mp_potluck" or MP.LOBBY.config.nano_br_mode == "hivemind")
 												and "pvp_ready_button"
 											or nil,
 										button = "select_blind",
@@ -602,7 +609,7 @@ G.FUNCS.blind_choice_handler = function(e)
 end
 
 G.FUNCS.pvp_ready_button = function(e)
-	if e.children[1].config.ref_table[e.children[1].config.ref_value] == localize("Select", "blind_states") then
+	if MP.LOBBY.is_started and e.children[1].config.ref_table[e.children[1].config.ref_value] == localize("Select", "blind_states") then
 		e.config.button = "mp_toggle_ready"
 		e.config.one_press = false
 		e.children[1].config.ref_table = MP.GAME
@@ -614,7 +621,7 @@ G.FUNCS.pvp_ready_button = function(e)
 end
 
 local function update_blind_HUD()
-	if MP.LOBBY.code and MP.LOBBY.config.nano_br_mode == "potluck" then
+	if MP.LOBBY.code and (MP.LOBBY.config.nano_br_mode == "potluck" or MP.LOBBY.config.nano_br_mode == "hivemind") then
 		G.HUD_blind.alignment.offset.y = -10
 		G.E_MANAGER:add_event(Event({
 			trigger = "after",
@@ -717,9 +724,14 @@ function Game:update_draw_to_hand(dt)
 										ref_table = MP.LOBBY.players[MP.LOBBY.enemy_id],
 										ref_value = "username",
 									},
-								} or {
+								} or MP.LOBBY.config.nano_br_mode == "potluck" and {
 									{
 										ref_table = { name = localize("k_potluck") },
+										ref_value = "name",
+									}
+								} or {
+									{
+										ref_table = { name = localize("k_hivemind") },
 										ref_value = "name",
 									}
 								}
@@ -863,7 +875,7 @@ function Game:update_hand_played(dt)
 	end
 
 	-- Ignore for singleplayer or regular blinds
-	if not MP.LOBBY.connected or not MP.LOBBY.code or not MP.is_pvp_boss() then
+	if not MP.LOBBY.connected or not MP.LOBBY.code or (not MP.is_pvp_boss() and MP.LOBBY.config.nano_br_mode ~= "hivemind") or MP.GAME.can_blind_end  then
 		update_hand_played_ref(self, dt)
 		return
 	end
@@ -883,7 +895,7 @@ function Game:update_hand_played(dt)
 			trigger = "immediate",
 			func = function()
 				-- Set blind chips to enemy score
-				if G.GAME.blind then
+				if G.GAME.blind and MP.is_pvp_boss() then
 					if MP.GAME.enemies["house"] then
 						G.GAME.blind.chip_text = MP.INSANE_INT.to_string(MP.GAME.enemies["house"].score)
 					elseif MP.GAME.enemies[MP.LOBBY.enemy_id] then
@@ -911,6 +923,16 @@ function Game:update_hand_played(dt)
 		G.STATE_COMPLETE = false
 		G.STATE = G.STATES.NEW_ROUND
 		MP.GAME.end_pvp = false
+		
+		G.E_MANAGER:add_event(Event({
+			trigger = "after",
+			delay = 0.5,
+			func = function()
+				G.FUNCS.draw_from_hand_to_deck()
+				G.FUNCS.draw_from_discard_to_deck()
+				return true
+			end
+		}))
 	end
 end
 
@@ -1689,6 +1711,8 @@ function reset_blinds()
 				G.GAME.round_resets.blind_choices.Boss = "bl_mp_nemesis"
 			elseif MP.LOBBY.config.nano_br_mode == "potluck" then
 				G.GAME.round_resets.blind_choices.Boss = "bl_mp_potluck"
+			elseif MP.LOBBY.config.nano_br_mode == "hivemind" then
+				G.GAME.round_resets.blind_choices.Boss = "bl_mp_hivemind"
 			end
 		end
 	end
@@ -1755,7 +1779,7 @@ G.FUNCS.multiplayer_blind_chip_UI_scale = function(e)
 		if G.GAME.blind and MP.GAME.enemies[MP.LOBBY.enemy_id].score_text ~= new_score_text then
 			MP.GAME.enemies[MP.LOBBY.enemy_id].score_text = new_score_text
 		end
-	elseif MP.LOBBY.config.nano_br_mode == "potluck" then
+	elseif MP.LOBBY.config.nano_br_mode == "potluck" or MP.LOBBY.config.nano_br_mode == "hivemind" then
 		if not MP.GAME.enemies["house"].score then
 			return
 		end

@@ -24,6 +24,7 @@ end
 local function action_joinedLobby(code, type)
 	MP.LOBBY.code = code
 	MP.LOBBY.type = type
+	MP.LOBBY.team_id = "RED"
 	MP.ACTIONS.lobby_info()
 	MP.UI.update_connection_status()
 end
@@ -40,10 +41,11 @@ function dump(o)
 	   return tostring(o)
 	end
  end
- 
+
 
 local function action_lobbyInfo(player_id, players_string, is_started)
 	-- Set players
+	local old = MP.LOBBY.players
 	MP.LOBBY.players = {}
 	MP.LOBBY.player_count = 0
 
@@ -55,6 +57,7 @@ local function action_lobbyInfo(player_id, players_string, is_started)
 			username = MP.UTILS.postProcessStringFromNetwork(player.username),
 			hash = MP.UTILS.postProcessStringFromNetwork(player.hash),
 			is_host = player.isHost == "true",
+			team_id = old[id] and old[id].team_id or "RED"
 		}
 		MP.LOBBY.player_count = MP.LOBBY.player_count + 1
 	end
@@ -116,7 +119,7 @@ local function action_start_game(seed, stake_str)
 	end
 	G.FUNCS.exit_overlay_menu()
 	G.FUNCS.lobby_start_run(nil, { seed = seed, stake = stake })
-	
+
 	-- Close menu UI after 0.2 sec if it's still there
 	G.E_MANAGER:add_event(Event({
 		trigger = "after",
@@ -133,6 +136,7 @@ local function action_start_blind()
 	MP.GAME.ready_blind = false
 	MP.GAME.timer_started = false
 	MP.GAME.timer = 120
+	MP.GAME.can_blind_end = false
 
 	if MP.GAME.next_blind_context then
 		G.FUNCS.select_blind(MP.GAME.next_blind_context)
@@ -216,14 +220,14 @@ local function action_enemy_info(player_id, enemy_id, score_str, hands_left_str,
 			if player_id == MP.LOBBY.player_id then
 				MP.LOBBY.enemy_id = enemy_id
 			end
-			
+
 			MP.GAME.enemies[player_id].enemy_id = enemy_id
 		else
 			-- Clear enemy
 			if player_id == MP.LOBBY.player_id then
 				MP.LOBBY.enemy_id = nil
 			end
-			
+
 			MP.GAME.enemies[player_id].enemy_id = nil
 		end
 	end
@@ -242,6 +246,12 @@ local function action_enemy_info(player_id, enemy_id, score_str, hands_left_str,
 	end
 end
 
+local function action_set_player_team(player_id, team_id)
+	if MP.LOBBY.players[player_id] then
+		MP.LOBBY.players[player_id].team_id = team_id
+	end
+end
+
 local function action_stop_game()
 	if G.STAGE ~= G.STAGES.MAIN_MENU then
 		G.FUNCS.go_to_menu()
@@ -253,6 +263,10 @@ end
 local function action_end_pvp()
 	MP.GAME.end_pvp = true
 	MP.LOBBY.enemy_id = nil
+end
+
+local function action_end_blind()
+	MP.GAME.can_blind_end = true
 end
 
 ---@param lives number
@@ -373,6 +387,8 @@ local function enemyLocation(options)
 		value = MP.LOBBY.players[MP.GAME.enemies[options.playerId].enemy_id].username
 	elseif value == "bl_mp_potluck" then
 		value = localize("k_potluck")
+	elseif value == "bl_mp_hivemind" then
+		value = localize("k_hivemind")
 	else
 		loc_name = localize({ type = "name_text", key = value, set = "Blind" })
 		if loc_name ~= "ERROR" then
@@ -382,7 +398,7 @@ local function enemyLocation(options)
 		end
 	end
 
-	loc_location = value == "bl_mp_nemesis" and localize("loc_fighting") or G.localization.misc.dictionary[location]
+	loc_location = (value == "bl_mp_nemesis" or value == "bl_mp_hivemind") and localize("loc_fighting") or G.localization.misc.dictionary[location]
 
 	if loc_location == nil then
 		if location ~= nil then
@@ -576,6 +592,180 @@ local function action_start_ante_timer(time)
 	G.E_MANAGER:add_event(MP.timer_event)
 end
 
+local score_waiting = false
+local function action_set_score(score)
+	G.E_MANAGER:add_event(Event({
+		trigger = "after",
+		delay = 0.2,
+		blockable = false,
+		blocking = false,
+		func = function()
+			print(score_waiting == true and "SCORE WAITING" or "SCORE NOT WAITING")
+			if score_waiting == true then
+				if not (G.STATE == G.STATES.SELECTING_HAND or G.STATE == G.STATES.HAND_PLAYED or G.STATE == G.STATES.DRAW_TO_HAND) then
+					score_waiting = false
+				end
+				return false
+			end
+
+			if not (G.STATE == G.STATES.SELECTING_HAND or G.STATE == G.STATES.HAND_PLAYED or G.STATE == G.STATES.DRAW_TO_HAND) then
+				return true
+			end
+
+			score_waiting = true
+			-- Handle offset if local hand is still calculating
+			MP.GAME.score_offset = MP.GAME.pre_calc_score - G.GAME.chips
+
+			if MP.GAME.calculating_hand then
+				G.E_MANAGER:add_event(Event({
+					trigger = "after",
+					delay = 0.05,
+					blockable = false,
+					blocking = false,
+					func = function()
+						if not MP.GAME.calculating_hand then
+							G.E_MANAGER:add_event(Event({
+								trigger = "after",
+								delay = 0.2,
+								blockable = false,
+								blocking = false,
+								func = function()
+									score_waiting = false
+									G.GAME.chips = math.floor(to_big(score + MP.GAME.score_offset))
+									MP.GAME.score_offset = G.GAME.chips
+									MP.GAME.last_score = G.GAME.chips
+
+									G.GAME.chips_text = tostring(G.GAME.chips)
+
+									-- End blind if won
+									if MP.GAME.can_blind_end and G.GAME.chips > 0 and G.GAME.chips - G.GAME.blind.chips >= 0 then
+										G.STATE = G.STATES.NEW_ROUND
+										G.STATE_COMPLETE = false
+		
+										G.E_MANAGER:add_event(Event({
+											trigger = "after",
+											delay = 0.5,
+											func = function()
+												G.FUNCS.draw_from_hand_to_deck()
+												G.FUNCS.draw_from_discard_to_deck()
+												return true
+											end
+										}))
+									end
+									return true
+								end
+							}))
+							return true
+						end
+						return false
+					end,
+				}))
+			else
+				score_waiting = false
+				G.GAME.chips = math.floor(to_big(score))
+				MP.GAME.last_score = G.GAME.chips
+
+				G.GAME.chips_text = tostring(G.GAME.chips)
+
+				-- End blind if won
+				if MP.GAME.can_blind_end and (G.STATE == G.STATES.SELECTING_HAND or G.STATE == G.STATES.HAND_PLAYED or G.STATE == G.STATES.DRAW_TO_HAND)
+					and G.GAME.chips > 0 and G.GAME.chips - G.GAME.blind.chips >= 0 then
+					G.STATE = G.STATES.NEW_ROUND
+					G.STATE_COMPLETE = false
+		
+					G.E_MANAGER:add_event(Event({
+						trigger = "after",
+						delay = 0.5,
+						func = function()
+							G.FUNCS.draw_from_hand_to_deck()
+							G.FUNCS.draw_from_discard_to_deck()
+							return true
+						end
+					}))
+
+				end
+			end
+			return true
+		end
+	}))
+end
+
+local function action_give_money(amount)
+	ease_dollars(math.floor(to_big(amount)))
+end
+
+local function action_skip_blind()
+	local current_blind_id = G.GAME.blind_on_deck or "Small"
+
+	if current_blind_id == "Boss" then
+		return
+	end
+
+	print("action_skip_blind-1: ", current_blind_id)
+	local blind
+	if current_blind_id == "Small" then
+		blind = G.blind_select_opts.small
+	else
+		blind = G.blind_select_opts.big
+	end
+
+	print("action_skip_blind-2: ", blind == nil and "FALSE" or "TRUE")
+
+	if blind == nil then
+		return
+	end
+
+	if MP.GAME.ready_blind then
+		MP.GAME.ready_blind = false
+		MP.GAME.ready_blind_text = MP.GAME.ready_blind and localize("b_unready") or localize("b_ready")
+
+		MP.ACTIONS.set_location("loc_selecting")
+		MP.ACTIONS.unready_blind()
+	end
+
+    stop_use()
+    G.CONTROLLER.locks.skip_blind = true
+    G.E_MANAGER:add_event(Event({
+        no_delete = true,
+        trigger = 'after',
+        blocking = false,blockable = false,
+        delay = 2.5,
+        timer = 'TOTAL',
+        func = function()
+          G.CONTROLLER.locks.skip_blind = nil
+          return true
+        end
+      }))
+    local _tag = blind:get_UIE_by_ID('tag_container')
+    G.GAME.skips = (G.GAME.skips or 0) + 1
+    if _tag then
+      add_tag(_tag.config.ref_table)
+      local skipped, skip_to = G.GAME.blind_on_deck or 'Small',
+      G.GAME.blind_on_deck == 'Small' and 'Big' or G.GAME.blind_on_deck == 'Big' and 'Boss' or 'Boss'
+      G.GAME.round_resets.blind_states[skipped] = 'Skipped'
+      G.GAME.round_resets.blind_states[skip_to] = 'Select'
+      G.GAME.blind_on_deck = skip_to
+      play_sound('generic1')
+      G.E_MANAGER:add_event(Event({
+        trigger = 'immediate',
+        func = function()
+          delay(0.3)
+          SMODS.calculate_context({skip_blind = true})
+          save_run()
+          for i = 1, #G.GAME.tags do
+            G.GAME.tags[i]:apply_to_run({type = 'immediate'})
+          end
+          for i = 1, #G.GAME.tags do
+            if G.GAME.tags[i]:apply_to_run({type = 'new_blind_choice'}) then break end
+          end
+          return true
+        end
+      }))
+	else
+		G.GAME.blind_on_deck = G.GAME.blind_on_deck == 'Small' and 'Big' or G.GAME.blind_on_deck == 'Big' and 'Boss' or 'Boss'
+    end
+end
+
 -- #region Client to Server
 function MP.ACTIONS.create_lobby(gamemode)
 	MP.LOBBY.config.ruleset = gamemode
@@ -594,6 +784,10 @@ function MP.ACTIONS.leave_lobby()
 	Client.send("action:leaveLobby")
 end
 
+function MP.ACTIONS.send_money_to_player(player_id, amount)
+	Client.send(string.format("action:sendMoneyToPlayer,playerId:%s,amount:%s", player_id, amount))
+end
+
 function MP.ACTIONS.kick_player(player_id)
 	Client.send(string.format("action:kickPlayer,playerId:%s", player_id))
 end
@@ -602,9 +796,13 @@ function MP.ACTIONS.start_game()
 	Client.send("action:startGame")
 end
 
+function MP.ACTIONS.set_team(team)
+	Client.send(string.format("action:setTeam,teamId:%s", team))
+end
+
 function MP.ACTIONS.ready_blind(e)
 	MP.GAME.next_blind_context = e
-	Client.send("action:readyBlind")
+	Client.send(string.format("action:readyBlind,isPVP:%s", e.config.ref_table.key == "bl_mp_hivemind"))
 end
 
 function MP.ACTIONS.unready_blind()
@@ -640,14 +838,28 @@ end
 ---@param score number
 ---@param hands_left number
 function MP.ACTIONS.play_hand(score, hands_left)
-	local fixed_score = tostring(to_big(score))
+	local fixed_score = tostring(to_big(score) + MP.GAME.score_offset)
+	MP.GAME.score_offset = 0
 	-- Credit to sidmeierscivilizationv on discord for this fix for Talisman
 	if string.match(fixed_score, "[eE]") == nil and string.match(fixed_score, "[.]") then
 		-- Remove decimal from non-exponential numbers
 		fixed_score = string.sub(string.gsub(fixed_score, "%.", ","), 1, -3)
 	end
 	fixed_score = string.gsub(fixed_score, ",", "") -- Remove commas
-	Client.send(string.format("action:playHand,score:" .. fixed_score .. ",handsLeft:%d", hands_left))
+
+	-- Do the same for the score delta
+	local score_delta = tostring(score - MP.GAME.last_score)
+	MP.GAME.last_score = tonumber(score)
+	MP.GAME.calculating_hand = false
+
+	if string.match(score_delta, "[eE]") == nil and string.match(score_delta, "[.]") then
+		-- Remove decimal from non-exponential numbers
+		score_delta = string.sub(string.gsub(score_delta, "%.", ","), 1, -3)
+	end
+	score_delta = string.gsub(score_delta, ",", "")
+	score_delta = score_delta
+
+	Client.send(string.format("action:playHand,score:" .. fixed_score .. ",scoreDelta:" .. score_delta .. ",handsLeft:%d", hands_left))
 end
 
 function MP.ACTIONS.lobby_options()
@@ -781,10 +993,14 @@ function Game:update(dt)
 					parsedAction.skips,
 					parsedAction.lives
 				)
+			elseif parsedAction.action == "setPlayerTeam" then
+				action_set_player_team(parsedAction.playerId, parsedAction.teamId)
 			elseif parsedAction.action == "stopGame" then
 				action_stop_game()
 			elseif parsedAction.action == "endPvP" then
 				action_end_pvp()
+			elseif parsedAction.action == "endBlind" then
+				action_end_blind()
 			elseif parsedAction.action == "playerInfo" then
 				action_player_info(parsedAction.lives)
 			elseif parsedAction.action == "winGame" then
@@ -821,6 +1037,12 @@ function Game:update(dt)
 				action_receive_end_game_jokers(parsedAction.keys)
 			elseif parsedAction.action == "startAnteTimer" then
 				action_start_ante_timer(parsedAction.time)
+			elseif parsedAction.action == "setScore" then
+				action_set_score(parsedAction.score)
+			elseif parsedAction.action == "giveMoney" then
+				action_give_money(parsedAction.amount)
+			elseif parsedAction.action == "skipBlind" then
+				action_skip_blind()
 			elseif parsedAction.action == "error" then
 				action_error(parsedAction.message)
 			elseif parsedAction.action == "message" then
