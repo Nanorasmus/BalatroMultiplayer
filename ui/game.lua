@@ -1126,8 +1126,7 @@ function Game:start_run(args)
 	-- Send deck to ante if playing hivemind
 	if MP.LOBBY.config.nano_br_mode == "hivemind" then
 		G.E_MANAGER:add_event(Event({
-			trigger = "after",
-			delay = 0.2,
+			trigger = "immediate",
 			func = function()
 				MP.ACTIONS.send_deck()
 				return true

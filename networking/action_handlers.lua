@@ -440,8 +440,11 @@ local function action_set_deck(deck_str)
 
 		local card = create_playing_card({front = G.P_CARDS[_suit..'_'.._rank], center = (enhancement == "none" and nil or G.P_CENTERS[enhancement])}, G.deck, true, true, nil, false)
 
-		if edition ~= "none" then
-			card:set_edition(edition, true, true)
+		if edition and edition ~= "none" then
+			local edition_object = {}
+			edition_object[edition] = true
+
+			card:set_edition(edition_object, true, true)
 		end
 		if seal ~= "none" then
 			card:set_seal(seal, true, true)
@@ -452,6 +455,24 @@ local function action_set_deck(deck_str)
 
 	MP.GAME.setting_deck = false
 	print("Done!")
+end
+
+local function action_set_hand_level(hand, level)
+	if not G.GAME.hands[hand] or not level then
+		return
+	end
+	if not G.GAME.hands[hand].visible then
+		G.GAME.hands[hand].visible = true
+	end
+
+	level = tonumber(level)
+
+	if not level then
+		print("Could not parse level for hand")
+		return
+	end
+
+	level_up_hand(nil, hand, true, level - G.GAME.hands[hand].level, true)
 end
 
 local function action_send_phantom(key)
@@ -1005,7 +1026,7 @@ local function card_to_string(card)
 	local rank = card.base.value
 
 	local enhancement = reversed_centers[card.config.center] or "none"
-	local edition = card.edition or "none"
+	local edition = card.edition and  MP.UTILS.reverse_key_value_pairs(card.edition, true)["true"] or "none"
 	local seal = card.seal or "none"
 
 	return suit .. "-" .. rank .. "-" .. enhancement .. "-" .. edition .. "-" .. seal
@@ -1028,23 +1049,52 @@ function MP.ACTIONS.send_deck()
 end
 
 function MP.ACTIONS.set_card_suit(card, suit)
-	Client.send(string.format("action:setCardSuit,card:%s,suit:%s", card_to_string(card), suit))
+	if MP.is_team_based() and card.playing_card then
+		Client.send(string.format("action:setCardSuit,card:%s,suit:%s", card_to_string(card), suit))
+	end
 end
 
 function MP.ACTIONS.set_card_rank(card, rank)
-	Client.send(string.format("action:setCardRank,card:%s,rank:%s", card_to_string(card), rank))
+	if MP.is_team_based() and card.playing_card then
+		Client.send(string.format("action:setCardRank,card:%s,rank:%s", card_to_string(card), rank))
+	end
 end
 
 function MP.ACTIONS.set_card_enhancement(card, enhancement)
-	Client.send(string.format("action:setCardEnhancement,card:%s,enhancement:%s", card_to_string(card), enhancement))
+	if MP.is_team_based() and card.playing_card then
+		Client.send(string.format("action:setCardEnhancement,card:%s,enhancement:%s", card_to_string(card), enhancement))
+	end
 end
 
 function MP.ACTIONS.set_card_edition(card, edition)
-	Client.send(string.format("action:setCardEdition,card:%s,edition:%s", card_to_string(card), edition))
+	if MP.is_team_based() and card.playing_card then
+		Client.send(string.format("action:setCardEdition,card:%s,edition:%s", card_to_string(card), edition))
+	end
 end
 
 function MP.ACTIONS.set_card_seal(card, seal)
-	Client.send(string.format("action:setCardSeal,card:%s,seal:%s", card_to_string(card), seal))
+	if MP.is_team_based() and card.playing_card then
+		Client.send(string.format("action:setCardSeal,card:%s,seal:%s", card_to_string(card), seal))
+	end
+end
+
+function MP.ACTIONS.add_card(card)
+	print("MP trying to send add_card!")
+	if MP.is_team_based() and card.playing_card then
+		Client.send(string.format("action:addCard,card:%s", card_to_string(card)))
+	end
+end
+
+function MP.ACTIONS.remove_card(card)
+	if MP.is_team_based() and card.playing_card then
+		Client.send(string.format("action:removeCard,card:%s", card_to_string(card)))
+	end
+end
+
+function MP.ACTIONS.change_hand_level(hand, amount)
+	if MP.is_team_based() then
+		Client.send(string.format("action:changeHandLevel,hand:%s,amount:%s", hand, amount))
+	end
 end
 
 
@@ -1193,6 +1243,8 @@ function Game:update(dt)
 				action_set_deck_type(parsedAction.back, parsedAction.sleeve, parsedAction.stake)
 			elseif parsedAction.action == "setDeck" then
 				action_set_deck(parsedAction.deck)
+			elseif parsedAction.action == "setHandLevel" then
+				action_set_hand_level(parsedAction.hand, parsedAction.level)
 			elseif parsedAction.action == "sendPhantom" then
 				action_send_phantom(parsedAction.key)
 			elseif parsedAction.action == "removePhantom" then

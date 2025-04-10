@@ -68,10 +68,10 @@ times = 1
 target = "card.lua"
 pattern = '''function Card:set_base(card, initial)'''
 position = 'after'
-payload = '''if card and card.suit and MP.LOBBY.code and MP.LOBBY.is_started and not MP.GAME.setting_deck and (self.area == G.deck or self.area == G.hand or self.area == G.discard or self.area == G.play) then
+payload = '''if card and card.suit and MP and MP.LOBBY.code and MP.LOBBY.is_started and not MP.GAME.setting_deck and (self.area == G.deck or self.area == G.hand or self.area == G.discard or self.area == G.play) then
 MP.ACTIONS.set_card_suit(self, card.suit)
 end
-if card and card.value and MP.LOBBY.code and MP.LOBBY.is_started and not MP.GAME.setting_deck and (self.area == G.deck or self.area == G.hand or self.area == G.discard or self.area == G.play) then
+if card and card.value and MP and MP.LOBBY.code and MP.LOBBY.is_started and not MP.GAME.setting_deck and (self.area == G.deck or self.area == G.hand or self.area == G.discard or self.area == G.play) then
 MP.ACTIONS.set_card_rank(self, card.value)
 end'''
 match_indent = true
@@ -84,7 +84,7 @@ pattern = '''function Card:change_suit(new_suit)
     local new_code = SMODS.Suits[new_suit].card_key'''
 position = 'after'
 payload = '''print("SUIT BEING CHANGED! " .. (new_code and "TRUE" or "FALSE") .. (MP.LOBBY and "TRUE" or "FALSE") .. (MP.GAME.setting_deck and "TRUE" or "FALSE"))
-if new_code and MP.LOBBY.code and MP.LOBBY.is_started and not MP.GAME.setting_deck and (self.area == G.deck or self.area == G.hand or self.area == G.discard or self.area == G.play) then
+if MP and new_code and MP.LOBBY.code and MP.LOBBY.is_started and not MP.GAME.setting_deck and (self.area == G.deck or self.area == G.hand or self.area == G.discard or self.area == G.play) then
 MP.ACTIONS.set_card_suit(self, new_code)
 end'''
 match_indent = true
@@ -95,38 +95,8 @@ times = 1
 target = "card.lua"
 pattern = '''function Card:set_ability(center, initial, delay_sprites)'''
 position = 'after'
-payload = '''print("Setting ability! " .. (MP.UTILS.reverse_key_value_pairs(G.P_CENTERS)[center] or "none") .. (MP.LOBBY and "TRUE" or "FALSE") .. (MP.LOBBY.code and "TRUE" or "FALSE") .. (MP.GAME.setting_deck and "TRUE" or "FALSE") .. ((self.area == G.deck or self.area == G.hand or self.area == G.discard or self.area == G.play) and "TRUE" or "FALSE"))
-if MP.LOBBY.code and MP.LOBBY.is_started and not MP.GAME.setting_deck and (self.area == G.deck or self.area == G.hand or self.area == G.discard or self.area == G.play) then
+payload = '''if MP and MP.LOBBY.code and MP.LOBBY.is_started and not MP.GAME.setting_deck and (self.area == G.deck or self.area == G.hand or self.area == G.discard or self.area == G.play) then
 MP.ACTIONS.set_card_enhancement(self, MP.UTILS.reverse_key_value_pairs(G.P_CENTERS)[center] or "none")
-end'''
-match_indent = true
-times = 1
-
-[[patches]]
-[patches.pattern]
-target = "card.lua"
-pattern = '''elseif edition.polychrome then
-        if not self.edition then self.edition = {} end
-        self.edition.x_mult = G.P_CENTERS.e_polychrome.config.extra
-        self.edition.polychrome = true
-        self.edition.type = 'polychrome'
-    elseif edition.negative then
-        if not self.edition then
-            self.edition = {}
-            if self.added_to_deck then --Need to override if adding negative to an existing joker
-                if self.ability.consumeable then
-                    G.consumeables.config.card_limit = G.consumeables.config.card_limit + 1
-                else
-                    G.jokers.config.card_limit = G.jokers.config.card_limit + 1
-                end
-            end
-        end
-        self.edition.negative = true
-        self.edition.type = 'negative'
-    end'''
-position = 'after'
-payload = '''if MP.LOBBY.code and MP.LOBBY.is_started and not MP.GAME.setting_deck and (self.area == G.deck or self.area == G.hand or self.area == G.discard or self.area == G.play) then
-MP.ACTIONS.set_card_edition(self, self.edition and self.edition.type or "none")
 end'''
 match_indent = true
 times = 1
@@ -137,8 +107,37 @@ target = "card.lua"
 pattern = '''function Card:set_seal(_seal, silent, immediate)'''
 position = 'after'
 payload = '''
-if MP.LOBBY.code and MP.LOBBY.is_started and not MP.GAME.setting_deck and (self.area == G.deck or self.area == G.hand or self.area == G.discard or self.area == G.play) then
+if MP and MP.LOBBY.code and MP.LOBBY.is_started and not MP.GAME.setting_deck and (self.area == G.deck or self.area == G.hand or self.area == G.discard or self.area == G.play) then
 MP.ACTIONS.set_card_seal(self, _seal or "none")
+end'''
+match_indent = true
+times = 1 
+
+# Creation
+[[patches]]
+[patches.pattern]
+target = "card.lua"
+pattern = '''
+function Card:add_to_deck(from_debuff)'''
+position = 'after'
+payload = '''print("Creating a card!")
+if MP and MP.LOBBY.code and MP.LOBBY.is_started and not MP.GAME.setting_deck then
+MP.ACTIONS.add_card(self)
+end'''
+match_indent = true
+times = 1
+
+
+# Destruction
+[[patches]]
+[patches.pattern]
+target = "card.lua"
+pattern = '''function Card:remove()
+    self.removed = true'''
+position = 'after'
+payload = '''print("Destroying a card!")
+if MP and MP.LOBBY.code and MP.LOBBY.is_started and not MP.GAME.setting_deck and (self.area == G.deck or self.area == G.hand or self.area == G.discard or self.area == G.play) then
+MP.ACTIONS.remove_card(self)
 end'''
 match_indent = true
 times = 1
