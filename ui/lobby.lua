@@ -1024,8 +1024,8 @@ function MP.UI.create_UIBox_nano_br_options()
 					create_option_cycle({
 						id = "nano_br_hivemind_team_option",
 						label = localize("b_opts_br_hivemind_team_selection"),
-						options = {"RED", "BLUE"},
-						current_option = MP.UTILS.reverse_key_value_pairs({"RED", "BLUE"})[MP.LOBBY.team_id],
+						options = {"RED", "BLUE", "ORANGE", "GREEN"},
+						current_option = MP.UTILS.reverse_key_value_pairs({"RED", "BLUE", "ORANGE", "GREEN"})[MP.LOBBY.team_id],
 						opt_callback = "change_nano_br_hivemind_team",
 					})
 				},
