@@ -98,7 +98,6 @@ function MP.reset_game_states()
 		comeback_bonus_given = true,
 		comeback_bonus = 0,
 		end_pvp = false,
-		can_blind_end = false,
 		enemies = {}, 
 		location = "loc_selecting",
 		next_blind_context = nil,
@@ -111,10 +110,10 @@ function MP.reset_game_states()
 		global_highest_score = MP.INSANE_INT.empty(),
 		timer = 120,
 		timer_started = false,
-		last_score = to_big(0),
-		pre_calc_score = to_big(0),
+		last_score = 0,
+		pre_calc_score = 0,
 		calculating_hand = false,
-		score_offset = to_big(0),
+		score_offset = 0,
 		setting_deck = false,
 	}
 

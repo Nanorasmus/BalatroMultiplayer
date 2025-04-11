@@ -136,7 +136,6 @@ local function action_start_blind()
 	MP.GAME.ready_blind = false
 	MP.GAME.timer_started = false
 	MP.GAME.timer = 120
-	MP.GAME.can_blind_end = false
 
 	if MP.GAME.next_blind_context then
 		G.FUNCS.select_blind(MP.GAME.next_blind_context)
@@ -276,7 +275,35 @@ local function action_end_pvp()
 end
 
 local function action_end_blind()
-	MP.GAME.can_blind_end = true
+	G.E_MANAGER:add_event(Event({
+		trigger = "immediate",
+		blockable = false,
+		blocking = false,
+		func = function()
+			if MP.GAME.calculating_hand then
+				return false
+			end
+
+			
+			G.GAME.blind.in_blind = false
+			G.STATE_COMPLETE = false
+			G.STATE = G.STATES.NEW_ROUND
+			MP.GAME.end_pvp = false
+			
+			G.E_MANAGER:add_event(Event({
+				trigger = "after",
+				delay = 2,
+				blockable = false,
+				blocking = false,
+				func = function()
+					G.FUNCS.draw_from_hand_to_deck()
+					G.FUNCS.draw_from_discard_to_deck()
+					return true
+				end
+			}))
+			return true
+		end
+	}))
 end
 
 ---@param lives number
@@ -748,7 +775,7 @@ end
 local score_waiting = false
 local function action_set_score(score)
 	if MP.GAME.calculating_hand then
-		MP.GAME.score_offset = (MP.GAME.pre_calc_score - G.GAME.chips) + (String_to_number(score) - G.GAME.chips)
+		MP.GAME.score_offset = (to_big(MP.GAME.pre_calc_score) - G.GAME.chips) + (String_to_number(score) - G.GAME.chips)
 	end
 
 	G.E_MANAGER:add_event(Event({
@@ -794,13 +821,6 @@ local function action_set_score(score)
 							MP.GAME.last_score = G.GAME.chips
 
 							G.GAME.chips_text = tostring(G.GAME.chips)
-
-							-- End blind if won
-							if MP.GAME.can_blind_end and G.GAME.chips > to_big(0) and G.GAME.chips - G.GAME.blind.chips >= to_big(0) then
-								G.STATE = G.STATES.NEW_ROUND
-								G.STATE_COMPLETE = false
-								G.GAME.blind.in_blind = false
-							end
 							return true
 						end
 					}))
@@ -817,6 +837,16 @@ local function action_give_money(amount)
 end
 
 local function skip_blind_internal()
+	-- Unready if ready
+	if MP.GAME.ready_blind then
+		MP.GAME.ready_blind = false
+		MP.GAME.ready_blind_text = MP.GAME.ready_blind and localize("b_unready") or localize("b_ready")
+
+		MP.ACTIONS.set_location("loc_selecting")
+		MP.ACTIONS.unready_blind()
+	end
+
+
 	local current_blind_id = G.GAME.blind_on_deck or "Small"
 
 	if current_blind_id == "Boss" then
@@ -833,14 +863,6 @@ local function skip_blind_internal()
 
 	if blind == nil then
 		return
-	end
-
-	if MP.GAME.ready_blind then
-		MP.GAME.ready_blind = false
-		MP.GAME.ready_blind_text = MP.GAME.ready_blind and localize("b_unready") or localize("b_ready")
-
-		MP.ACTIONS.set_location("loc_selecting")
-		MP.ACTIONS.unready_blind()
 	end
 
     stop_use()
@@ -984,11 +1006,9 @@ function MP.ACTIONS.set_location(location)
 	Client.send(string.format("action:setLocation,location:%s", location))
 end
 
----@param score number
----@param hands_left number
-function MP.ACTIONS.play_hand(score, hands_left)
-	local fixed_score = tostring(to_big(score) + MP.GAME.score_offset)
-	MP.GAME.score_offset = to_big(0)
+local function process_number(number)
+	local fixed_score = tostring(number)
+
 	-- Credit to sidmeierscivilizationv on discord for this fix for Talisman
 	if string.match(fixed_score, "[eE]") == nil and string.match(fixed_score, "[.]") then
 		-- Remove decimal from non-exponential numbers
@@ -996,19 +1016,23 @@ function MP.ACTIONS.play_hand(score, hands_left)
 	end
 	fixed_score = string.gsub(fixed_score, ",", "") -- Remove commas
 
+	return fixed_score
+end
+
+---@param score number
+---@param hands_left number
+function MP.ACTIONS.play_hand(score, hands_left)
+	local fixed_score = process_number(to_big(score) + to_big(MP.GAME.score_offset))
+	MP.GAME.score_offset = to_big(0)
+
 	-- Do the same for the score delta
-	local score_delta = tostring(score - MP.GAME.last_score)
+	local score_delta = process_number(score - to_big(MP.GAME.last_score))
 	MP.GAME.last_score = to_big(score)
 	MP.GAME.calculating_hand = false
 
-	if string.match(score_delta, "[eE]") == nil and string.match(score_delta, "[.]") then
-		-- Remove decimal from non-exponential numbers
-		score_delta = string.sub(string.gsub(score_delta, "%.", ","), 1, -3)
-	end
-	score_delta = string.gsub(score_delta, ",", "")
-	score_delta = score_delta
+	local blind_chips = process_number(G.GAME.blind and G.GAME.blind.chips or 0)
 
-	Client.send(string.format("action:playHand,score:" .. fixed_score .. ",scoreDelta:" .. score_delta .. ",handsLeft:%d", hands_left))
+	Client.send(string.format("action:playHand,score:" .. fixed_score .. ",scoreDelta:" .. score_delta .. ",blindChips:" .. blind_chips .. ",handsLeft:%d", hands_left))
 end
 
 function MP.ACTIONS.lobby_options()
@@ -1055,7 +1079,7 @@ local function card_to_string(card, reroll_id)
 	if card.mp_id and not reroll_id then
 		id = card.mp_id
 	else
-		id = "ID_" .. hash(card_str .. random_string(8, G.TIMERS.UPTIME) .. last_generated_id, 100000000)
+		id = "ID_" .. hash(card_str .. random_string(8, G.TIMERS.UPTIME) .. last_generated_id, 10000)
 		last_generated_id = id
 		card.mp_id = id
 	end
@@ -1073,10 +1097,17 @@ function MP.ACTIONS.send_deck()
 		end
 
 		deck_str = deck_str .. card_to_string(card)
+
+		if string.len(deck_str) > 1000 then
+			Client.send(string.format("action:sendDeck,deck:%s", deck_str))
+			deck_str = ""
+		end
+	end
+
+	if string.len(deck_str) > 0 then
+		Client.send(string.format("action:sendDeck,deck:%s", deck_str))
 	end
 	print("Done!")
-
-	Client.send(string.format("action:sendDeck,deck:%s", deck_str))
 end
 
 function MP.ACTIONS.set_card_suit(card, suit)

@@ -875,7 +875,7 @@ function Game:update_hand_played(dt)
 	end
 
 	-- Ignore for singleplayer or regular blinds
-	if not MP.LOBBY.connected or not MP.LOBBY.code or (not MP.is_pvp_boss() and MP.LOBBY.config.nano_br_mode ~= "hivemind") or MP.GAME.can_blind_end  then
+	if not MP.LOBBY.connected or not MP.LOBBY.code or (not MP.is_pvp_boss() and MP.LOBBY.config.nano_br_mode ~= "hivemind")  then
 		update_hand_played_ref(self, dt)
 		return
 	end
@@ -922,11 +922,14 @@ function Game:update_hand_played(dt)
 	if MP.GAME.end_pvp then
 		G.STATE_COMPLETE = false
 		G.STATE = G.STATES.NEW_ROUND
+		G.GAME.blind.in_blind = false
 		MP.GAME.end_pvp = false
 		
 		G.E_MANAGER:add_event(Event({
 			trigger = "after",
 			delay = 0.5,
+			blockable = false,
+			blocking = false,
 			func = function()
 				G.FUNCS.draw_from_hand_to_deck()
 				G.FUNCS.draw_from_discard_to_deck()
@@ -955,7 +958,7 @@ function Game:update_new_round(dt)
 	end
 	if MP.LOBBY.code and not G.STATE_COMPLETE then
 		-- Prevent player from losing
-		if to_big(G.GAME.chips) < to_big(G.GAME.blind.chips) and not MP.is_pvp_boss() then
+		if to_big(G.GAME.chips) < to_big(G.GAME.blind.chips) and not MP.is_pvp_boss() and not MP.is_team_based() then
 			G.GAME.blind.chips = -1
 			MP.ACTIONS.fail_round(G.GAME.current_round.hands_played)
 		end
@@ -1126,7 +1129,8 @@ function Game:start_run(args)
 	-- Send deck to ante if playing hivemind
 	if MP.LOBBY.config.nano_br_mode == "hivemind" then
 		G.E_MANAGER:add_event(Event({
-			trigger = "immediate",
+			trigger = "after",
+			delay = 0.5,
 			func = function()
 				MP.ACTIONS.send_deck()
 				return true
@@ -1742,6 +1746,7 @@ function Game:update_selecting_hand(dt)
 		if not MP.is_pvp_boss() then
 			G.STATE_COMPLETE = false
 			G.STATE = G.STATES.NEW_ROUND
+			G.GAME.blind.in_blind = false
 		else
 			G.STATE_COMPLETE = false
 			G.STATE = G.STATES.HAND_PLAYED
@@ -1754,6 +1759,7 @@ function Game:update_selecting_hand(dt)
 		G.hand:unhighlight_all()
 		G.STATE_COMPLETE = false
 		G.STATE = G.STATES.NEW_ROUND
+		G.GAME.blind.in_blind = false
 		MP.GAME.end_pvp = false
 	end
 end

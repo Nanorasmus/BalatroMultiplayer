@@ -356,7 +356,7 @@ function MP.UI.create_UIBox_player_row(player_id)
 				minh = 0.45,
 				
 				col = true,
-				enabled_ref_table = { enabled = player_id ~= MP.LOBBY.player_id and G.GAME.dollars >= to_big(5) },
+				enabled_ref_table = { enabled = player_id ~= MP.LOBBY.player_id and to_big(G.GAME.dollars) >= to_big(5) },
 				enabled_ref_value = "enabled",
 			}) or MP.LOBBY.is_started and {
 				n = G.UIT.C,
