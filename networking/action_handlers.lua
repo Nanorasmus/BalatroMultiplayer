@@ -140,6 +140,16 @@ local function action_start_blind()
 
 	if MP.GAME.next_blind_context then
 		G.FUNCS.select_blind(MP.GAME.next_blind_context)
+
+		-- Re-end timer after half a second in case opponent started it as we readied up
+		G.E_MANAGER:add_event(Event({
+			trigger = "after",
+			time = 0.5,
+			func = function()
+				MP.GAME.timer_started = false
+				return true
+			end
+		}))
 	else
 		sendErrorMessage("No next blind context", "MULTIPLAYER")
 	end
@@ -382,7 +392,13 @@ local function action_set_deck(deck_str)
 	-- Clear current deck
 	for _, card in ipairs(G.deck.cards) do
 		card:remove_from_deck()
-		card.area:remove_card(card)
+		if card.area then
+			if card.highlighted then
+				card.area:remove_from_highlighted(card, true)
+			end
+
+			card.area:remove_card(card)
+		end
 		card:remove()
 	end
 	G.deck.cards = {}
@@ -429,14 +445,16 @@ local function action_set_deck(deck_str)
 		end
 		local card_params = MP.UTILS.string_split(card_str, "-")
 
-		print(card_params[1], card_params[2], card_params[3], card_params[4], card_params[5])
+		print(card_params[1], card_params[2], card_params[3], card_params[4], card_params[5], card_params[6])
 
-		local _suit = card_params[1]
-		local _rank = card_params[2]
+		local id = card_params[1]
+
+		local _suit = card_params[2]
+		local _rank = card_params[3]
 		
-		local enhancement = card_params[3]
-		local edition = card_params[4]
-		local seal = card_params[5]
+		local enhancement = card_params[4]
+		local edition = card_params[5]
+		local seal = card_params[6]
 
 		local card = create_playing_card({front = G.P_CARDS[_suit..'_'.._rank], center = (enhancement == "none" and nil or G.P_CENTERS[enhancement])}, G.deck, true, true, nil, false)
 
@@ -449,6 +467,8 @@ local function action_set_deck(deck_str)
 		if seal ~= "none" then
 			card:set_seal(seal, true, true)
 		end
+
+		card.mp_id = id
 		
 		::continue::
 	end
@@ -727,9 +747,12 @@ end
 
 local score_waiting = false
 local function action_set_score(score)
+	if MP.GAME.calculating_hand then
+		MP.GAME.score_offset = (MP.GAME.pre_calc_score - G.GAME.chips) + (String_to_number(score) - G.GAME.chips)
+	end
+
 	G.E_MANAGER:add_event(Event({
-		trigger = "after",
-		delay = 0.2,
+		trigger = "immediate",
 		blockable = false,
 		blocking = false,
 		func = function()
@@ -740,84 +763,50 @@ local function action_set_score(score)
 				return false
 			end
 
-			print(G.STATE)
 			if not (G.STATE == G.STATES.SELECTING_HAND or G.STATE == G.STATES.HAND_PLAYED or G.STATE == G.STATES.DRAW_TO_HAND) then
 				return true
 			end
 
 			score_waiting = true
+					
 			-- Handle offset if local hand is still calculating
-			MP.GAME.score_offset = MP.GAME.pre_calc_score - G.GAME.chips
 
-			if MP.GAME.calculating_hand then
-				G.E_MANAGER:add_event(Event({
-					trigger = "after",
-					delay = 0.05,
-					blockable = false,
-					blocking = false,
-					func = function()
-						if not MP.GAME.calculating_hand then
-							G.E_MANAGER:add_event(Event({
-								trigger = "after",
-								delay = 0.2,
-								blockable = false,
-								blocking = false,
-								func = function()
-									score_waiting = false
-									G.GAME.chips = math.floor(to_big(score + MP.GAME.score_offset))
-									MP.GAME.score_offset = G.GAME.chips
-									MP.GAME.last_score = G.GAME.chips
-
-									G.GAME.chips_text = tostring(G.GAME.chips)
-
-									-- End blind if won
-									if MP.GAME.can_blind_end and G.GAME.chips > 0 and G.GAME.chips - G.GAME.blind.chips >= 0 then
-										G.STATE = G.STATES.NEW_ROUND
-										G.STATE_COMPLETE = false
-		
-										G.E_MANAGER:add_event(Event({
-											trigger = "after",
-											delay = 0.5,
-											func = function()
-												G.FUNCS.draw_from_hand_to_deck()
-												G.FUNCS.draw_from_discard_to_deck()
-												return true
-											end
-										}))
-									end
-									return true
-								end
-							}))
-							return true
-						end
+			G.E_MANAGER:add_event(Event({
+				trigger = "immediate",
+				blockable = false,
+				blocking = false,
+				func = function()
+					if MP.GAME.calculating_hand then
 						return false
-					end,
-				}))
-			else
-				score_waiting = false
-				G.GAME.chips = math.floor(to_big(score))
-				MP.GAME.last_score = G.GAME.chips
-
-				G.GAME.chips_text = tostring(G.GAME.chips)
-
-				-- End blind if won
-				if MP.GAME.can_blind_end and (G.STATE == G.STATES.SELECTING_HAND or G.STATE == G.STATES.HAND_PLAYED or G.STATE == G.STATES.DRAW_TO_HAND)
-					and G.GAME.chips > 0 and G.GAME.chips - G.GAME.blind.chips >= 0 then
-					G.STATE = G.STATES.NEW_ROUND
-					G.STATE_COMPLETE = false
-		
+					end
+			
 					G.E_MANAGER:add_event(Event({
 						trigger = "after",
-						delay = 0.5,
+						delay = 0.05,
+						blockable = false,
+						blocking = false,
 						func = function()
-							G.FUNCS.draw_from_hand_to_deck()
-							G.FUNCS.draw_from_discard_to_deck()
+							score_waiting = false
+
+							print("Setting score to " .. tostring(String_to_number(score)))
+							G.GAME.chips = String_to_number(score)
+							print ("Setting last score to " .. tostring(G.GAME.chips))
+							MP.GAME.last_score = G.GAME.chips
+
+							G.GAME.chips_text = tostring(G.GAME.chips)
+
+							-- End blind if won
+							if MP.GAME.can_blind_end and G.GAME.chips > to_big(0) and G.GAME.chips - G.GAME.blind.chips >= to_big(0) then
+								G.STATE = G.STATES.NEW_ROUND
+								G.STATE_COMPLETE = false
+								G.GAME.blind.in_blind = false
+							end
 							return true
 						end
 					}))
-
-				end
-			end
+					return true
+				end,
+			}))
 			return true
 		end
 	}))
@@ -827,7 +816,7 @@ local function action_give_money(amount)
 	ease_dollars(math.floor(to_big(amount)))
 end
 
-local function action_skip_blind()
+local function skip_blind_internal()
 	local current_blind_id = G.GAME.blind_on_deck or "Small"
 
 	if current_blind_id == "Boss" then
@@ -895,6 +884,35 @@ local function action_skip_blind()
 	else
 		G.GAME.blind_on_deck = G.GAME.blind_on_deck == 'Small' and 'Big' or G.GAME.blind_on_deck == 'Big' and 'Boss' or 'Boss'
     end
+end
+
+local function action_skip_blind()
+	if G.STATE == G.STATES.BLIND_SELECT then
+		skip_blind_internal()
+		return
+	end
+
+	G.E_MANAGER:add_event(Event({
+		trigger = "immediate",
+		blocking = false,
+		blockable = false,
+		func = function()
+			if G.STATE == G.STATES.BLIND_SELECT then
+				G.E_MANAGER:add_event(Event({
+					trigger = "after",
+					delay = 0.5,
+					blocking = false,
+					blockable = false,
+					func = function()
+						skip_blind_internal()
+						return true
+					end
+				}))
+				return true
+			end
+			return false
+		end
+	}))
 end
 
 -- #region Client to Server
@@ -970,7 +988,7 @@ end
 ---@param hands_left number
 function MP.ACTIONS.play_hand(score, hands_left)
 	local fixed_score = tostring(to_big(score) + MP.GAME.score_offset)
-	MP.GAME.score_offset = 0
+	MP.GAME.score_offset = to_big(0)
 	-- Credit to sidmeierscivilizationv on discord for this fix for Talisman
 	if string.match(fixed_score, "[eE]") == nil and string.match(fixed_score, "[.]") then
 		-- Remove decimal from non-exponential numbers
@@ -980,7 +998,7 @@ function MP.ACTIONS.play_hand(score, hands_left)
 
 	-- Do the same for the score delta
 	local score_delta = tostring(score - MP.GAME.last_score)
-	MP.GAME.last_score = tonumber(score)
+	MP.GAME.last_score = to_big(score)
 	MP.GAME.calculating_hand = false
 
 	if string.match(score_delta, "[eE]") == nil and string.match(score_delta, "[.]") then
@@ -1013,7 +1031,9 @@ end
 -- Pre-compile a reversed list of all the centers
 local reversed_centers = nil
 
-local function card_to_string(card)
+local last_generated_id = ""
+
+local function card_to_string(card, reroll_id)
 	if not card or not card.base or not card.base.suit or not card.base.value then
 		return ""
 	end
@@ -1029,7 +1049,18 @@ local function card_to_string(card)
 	local edition = card.edition and  MP.UTILS.reverse_key_value_pairs(card.edition, true)["true"] or "none"
 	local seal = card.seal or "none"
 
-	return suit .. "-" .. rank .. "-" .. enhancement .. "-" .. edition .. "-" .. seal
+	local card_str = suit .. "-" .. rank .. "-" .. enhancement .. "-" .. edition .. "-" .. seal
+
+	local id
+	if card.mp_id and not reroll_id then
+		id = card.mp_id
+	else
+		id = "ID_" .. hash(card_str .. random_string(8, G.TIMERS.UPTIME) .. last_generated_id, 100000000)
+		last_generated_id = id
+		card.mp_id = id
+	end
+
+	return id .. ">" .. card_str
 end
 
 function MP.ACTIONS.send_deck()
@@ -1050,44 +1081,44 @@ end
 
 function MP.ACTIONS.set_card_suit(card, suit)
 	if MP.is_team_based() and card.playing_card then
-		Client.send(string.format("action:setCardSuit,card:%s,suit:%s", card_to_string(card), suit))
+		Client.send(string.format("action:setCardSuit,card:%s,suit:%s", card.mp_id, suit))
 	end
 end
 
 function MP.ACTIONS.set_card_rank(card, rank)
 	if MP.is_team_based() and card.playing_card then
-		Client.send(string.format("action:setCardRank,card:%s,rank:%s", card_to_string(card), rank))
+		Client.send(string.format("action:setCardRank,card:%s,rank:%s", card.mp_id, rank))
 	end
 end
 
 function MP.ACTIONS.set_card_enhancement(card, enhancement)
 	if MP.is_team_based() and card.playing_card then
-		Client.send(string.format("action:setCardEnhancement,card:%s,enhancement:%s", card_to_string(card), enhancement))
+		Client.send(string.format("action:setCardEnhancement,card:%s,enhancement:%s", card.mp_id, enhancement))
 	end
 end
 
 function MP.ACTIONS.set_card_edition(card, edition)
 	if MP.is_team_based() and card.playing_card then
-		Client.send(string.format("action:setCardEdition,card:%s,edition:%s", card_to_string(card), edition))
+		Client.send(string.format("action:setCardEdition,card:%s,edition:%s", card.mp_id, edition))
 	end
 end
 
 function MP.ACTIONS.set_card_seal(card, seal)
 	if MP.is_team_based() and card.playing_card then
-		Client.send(string.format("action:setCardSeal,card:%s,seal:%s", card_to_string(card), seal))
+		Client.send(string.format("action:setCardSeal,card:%s,seal:%s", card.mp_id, seal))
 	end
 end
 
 function MP.ACTIONS.add_card(card)
 	print("MP trying to send add_card!")
 	if MP.is_team_based() and card.playing_card then
-		Client.send(string.format("action:addCard,card:%s", card_to_string(card)))
+		Client.send(string.format("action:addCard,card:%s", card_to_string(card, true)))
 	end
 end
 
 function MP.ACTIONS.remove_card(card)
 	if MP.is_team_based() and card.playing_card then
-		Client.send(string.format("action:removeCard,card:%s", card_to_string(card)))
+		Client.send(string.format("action:removeCard,card:%s", card.mp_id))
 	end
 end
 

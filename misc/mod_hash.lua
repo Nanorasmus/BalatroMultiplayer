@@ -1,12 +1,12 @@
 MP.MOD_HASH = "0000"
 MP.MOD_STRING = ""
 
-function hash(str)
+function hash(str, length)
 	local str_to_hash = str or "0000"
 	local hash = 0
 	for i = 1, #str_to_hash do
 		local char = string.byte(str_to_hash, i)
-		hash = (hash * 31 + char) % 10000
+		hash = (hash * 31 + char) % (length or 10000)
 	end
 	return string.format("%04d", hash)
 end

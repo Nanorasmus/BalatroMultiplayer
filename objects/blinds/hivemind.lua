@@ -74,8 +74,8 @@ function copy_card(other, new_card, card_scale, playing_card, strip_edition)
 	if new_card and new_card.playing_card and other and other.playing_card and MP and MP.LOBBY.code and MP.LOBBY.is_started and not MP.GAME.setting_deck
 	and (new_card.area == G.deck or new_card.area == G.hand or new_card.area == G.discard or new_card.area == G.play)
 	and (other.area == G.deck or other.area == G.hand or other.area == G.discard or other.area == G.play) then
-		MP.ACTIONS.remove_card(new_card)
-		MP.ACTIONS.add_card(other)
+		-- MP.ACTIONS.remove_card(new_card)
+		-- MP.ACTIONS.add_card(other)
 	end
 
 	return copy_card_ref(other, new_card, card_scale, playing_card, strip_edition)

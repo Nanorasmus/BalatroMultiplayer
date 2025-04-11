@@ -111,10 +111,10 @@ function MP.reset_game_states()
 		global_highest_score = MP.INSANE_INT.empty(),
 		timer = 120,
 		timer_started = false,
-		last_score = 0,
-		pre_calc_score = 0,
+		last_score = to_big(0),
+		pre_calc_score = to_big(0),
 		calculating_hand = false,
-		score_offset = 0,
+		score_offset = to_big(0),
 		setting_deck = false,
 	}
 

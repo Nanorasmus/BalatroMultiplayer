@@ -356,7 +356,7 @@ function MP.UI.create_UIBox_player_row(player_id)
 				minh = 0.45,
 				
 				col = true,
-				enabled_ref_table = { enabled = player_id ~= MP.LOBBY.player_id and G.GAME.dollars >= 5 },
+				enabled_ref_table = { enabled = player_id ~= MP.LOBBY.player_id and G.GAME.dollars >= to_big(5) },
 				enabled_ref_value = "enabled",
 			}) or MP.LOBBY.is_started and {
 				n = G.UIT.C,
@@ -384,8 +384,8 @@ end
 function G.FUNCS.send_money_to_player(e)
 	local player_id = e.config.button_args.player_id
 
-	if player_id and G.GAME.dollars >= 5 then
-		ease_dollars(-5, true)
+	if player_id and G.GAME.dollars >= to_big(5) then
+		ease_dollars(to_big(-5), true)
 		
 		MP.ACTIONS.send_money_to_player(player_id, 5 - MP.LOBBY.config.nano_br_hivemind_transfer_tax)
 	end
