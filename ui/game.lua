@@ -1791,6 +1791,10 @@ G.FUNCS.multiplayer_blind_chip_UI_scale = function(e)
 		if not MP.GAME.enemies[MP.LOBBY.enemy_id].score then
 			return
 		end
+
+		if not MP.INSANE_INT.greater_than(MP.GAME.enemies[MP.LOBBY.enemy_id].score, MP.INSANE_INT.create(0, G.E_SWITCH_POINT, 0)) then
+			e.config.scale = scale_number(MP.GAME.enemies[MP.LOBBY.enemy_id].score.coeffiocient, 0.7, 100000)
+		end
 		
 		local new_score_text = MP.INSANE_INT.to_string(MP.GAME.enemies[MP.LOBBY.enemy_id].score)
 		if G.GAME.blind and MP.GAME.enemies[MP.LOBBY.enemy_id].score_text ~= new_score_text then
@@ -1799,6 +1803,10 @@ G.FUNCS.multiplayer_blind_chip_UI_scale = function(e)
 	elseif MP.LOBBY.config.nano_br_mode == "potluck" or MP.LOBBY.config.nano_br_mode == "hivemind" then
 		if not MP.GAME.enemies["house"].score then
 			return
+		end
+
+		if not MP.INSANE_INT.greater_than(MP.GAME.enemies["house"].score, MP.INSANE_INT.create(0, G.E_SWITCH_POINT, 0)) then
+			e.config.scale = scale_number(MP.GAME.enemies["house"].score.coeffiocient, 0.7, 100000)
 		end
 		
 		local new_score_text = MP.INSANE_INT.to_string(MP.GAME.enemies["house"].score)
