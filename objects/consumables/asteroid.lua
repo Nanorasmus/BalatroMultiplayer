@@ -17,7 +17,7 @@ SMODS.Consumable({
 		return { vars = { 1 } }
 	end,
 	in_pool = function(self)
-		return MP.LOBBY.code and MP.LOBBY.config.multiplayer_jokers
+		return MP.LOBBY.code and (MP.LOBBY.config.multiplayer_jokers or MP.LOBBY.config.nano_br_mode == "hivemind")
 	end,
 	can_use = function(self, card)
 		return true

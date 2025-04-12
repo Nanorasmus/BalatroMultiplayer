@@ -259,6 +259,16 @@ local function action_set_player_team(player_id, team_id)
 	if MP.LOBBY.players[player_id] then
 		MP.LOBBY.players[player_id].team_id = team_id
 	end
+
+	if MP.GAME.enemies[player_id] then
+		MP.GAME.enemies[player_id].team_id = team_id
+	end
+
+	if player_id == "house" and MP.is_team_based() and G.C[team_id] then
+		if MP.LOBBY.config.nano_br_mode == "hivemind" then
+			G.P_BLINDS["bl_mp_hivemind"].boss_colour = G.C[team_id]
+		end
+	end
 end
 
 local function action_stop_game()
@@ -367,6 +377,7 @@ local function action_lobby_options(options)
 		-- Handle mode switching
 		if MP.LOBBY.config.nano_br_mode == "hivemind" then
 			MP.ACTIONS.send_deck_type()
+			MP.LOBBY.config.multiplayer_jokers = false
 		end
 	end
 end
@@ -599,7 +610,7 @@ local action_asteroid = action_asteroid or function()
 		mult = G.GAME.hands[hand_type].mult,
 		level = G.GAME.hands[hand_type].level,
 	})
-	level_up_hand(nil, hand_type, false, -1)
+	level_up_hand(nil, hand_type, false, -1, true)
 	update_hand_text(
 		{ sound = "button", volume = 0.7, pitch = 1.1, delay = 0 },
 		{ mult = 0, chips = 0, handname = "", level = "" }

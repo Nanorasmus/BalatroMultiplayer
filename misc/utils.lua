@@ -302,10 +302,20 @@ end
 
 function add_nemesis_info(info_queue)
 	if MP.LOBBY.code then
+		local nemesis_username
+
+		if MP.LOBBY.enemy_id and MP.LOBBY.players[MP.LOBBY.enemy_id] and MP.LOBBY.players[MP.LOBBY.enemy_id].username then
+			nemesis_username = MP.LOBBY.players[MP.LOBBY.enemy_id].username
+		end
+
+		if MP.is_team_based() and MP.GAME.enemies["house"] and MP.GAME.enemies["house"].team_id and MP.GAME.enemies["house"].team_id ~= "GREY" then
+			nemesis_username = MP.GAME.enemies["house"].team_id .. " " .. string.upper(localize("k_hive"))
+		end
+
 		info_queue[#info_queue + 1] = {
 			set = "Other",
 			key = "current_nemesis",
-			vars = { MP.LOBBY.enemy_id and MP.LOBBY.players[MP.LOBBY.enemy_id] and MP.LOBBY.players[MP.LOBBY.enemy_id].username or "No one" },
+			vars = { nemesis_username or localize("k_no_one") },
 		}
 	end
 end

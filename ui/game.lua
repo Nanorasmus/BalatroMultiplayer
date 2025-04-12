@@ -152,7 +152,15 @@ function create_UIBox_blind_choice(type, run_info)
 				blind_amt = "???"
 			end
 		elseif G.GAME.round_resets.blind_choices[type] == "bl_mp_hivemind" then
-			loc_name = localize("k_hivemind")
+			if MP.GAME.enemies["house"] and MP.GAME.enemies["house"].team_id then
+				local team_id = MP.GAME.enemies["house"].team_id
+				-- Using string.upper in case I wanna use the word "Hive" somewhere else without all caps
+				loc_name = team_id ~= "GREY" and (team_id .. " " .. string.upper(localize("k_hive"))) or localize("k_no_one")
+				blind_col = G.C[MP.GAME.enemies["house"].team_id]
+			else
+				loc_name = localize("k_hivemind")
+			end
+
 			if MP.GAME.enemies["house"] and MP.GAME.enemies["house"].highest_score and MP.GAME.enemies["house"].highest_score.coeffiocient > 0 then
 				blind_amt = MP.INSANE_INT.to_string(MP.GAME.enemies["house"].highest_score)
 			else

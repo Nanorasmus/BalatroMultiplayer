@@ -527,8 +527,8 @@ function G.UIDEF.create_UIBox_lobby_options()
 												nodes = {
 													Disableable_Toggle({
 														id = "multiplayer_jokers_toggle",
-														enabled_ref_table = MP.LOBBY,
-														enabled_ref_value = "is_host",
+														enabled_ref_table = { is_enabled = (MP.LOBBY and MP.LOBBY.config.nano_br_mode ~= "hivemind") },
+														enabled_ref_value = "is_enabled",
 														label = localize("b_opts_multiplayer_jokers"),
 														ref_table = MP.LOBBY.config,
 														ref_value = "multiplayer_jokers",

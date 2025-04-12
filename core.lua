@@ -122,6 +122,7 @@ function MP.reset_game_states()
 	for k, player in pairs(MP.LOBBY.players) do
 		MP.GAME.enemies[player.id] = {
 			enemy_id = nil,
+			team_id = player.team_id or "RED",
 			score = MP.INSANE_INT.empty(),
 			highest_score = MP.INSANE_INT.empty(),
 			score_text = "0",
@@ -137,6 +138,7 @@ function MP.reset_game_states()
 	-- Used for enemy scores not owned by a particular player
 	MP.GAME.enemies["house"] = {
 		enemy_id = nil,
+		team_id = "BLUE",
 		score = MP.INSANE_INT.empty(),
 		highest_score = MP.INSANE_INT.empty(),
 		score_text = "0",
