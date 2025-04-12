@@ -56,9 +56,7 @@ function Card:set_edition(edition, immediate, silent, delay)
 		MP.ACTIONS.set_card_edition(self, new_edition)
 	end
 
-	print("Test1")
 	set_edition_ref(self, edition, immediate, silent, delay)
-	print("Test2")
 end
 
 local level_up_hand_ref = level_up_hand

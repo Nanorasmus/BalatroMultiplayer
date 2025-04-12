@@ -284,23 +284,7 @@ local function action_end_blind()
 				return false
 			end
 
-			
-			G.GAME.blind.in_blind = false
-			G.STATE_COMPLETE = false
-			G.STATE = G.STATES.NEW_ROUND
-			MP.GAME.end_pvp = false
-			
-			G.E_MANAGER:add_event(Event({
-				trigger = "after",
-				delay = 2,
-				blockable = false,
-				blocking = false,
-				func = function()
-					G.FUNCS.draw_from_hand_to_deck()
-					G.FUNCS.draw_from_discard_to_deck()
-					return true
-				end
-			}))
+			MP.GAME.end_pvp = true
 			return true
 		end
 	}))
@@ -790,7 +774,7 @@ local function action_set_score(score)
 				return false
 			end
 
-			if not (G.STATE == G.STATES.SELECTING_HAND or G.STATE == G.STATES.HAND_PLAYED or G.STATE == G.STATES.DRAW_TO_HAND) then
+			if not G.GAME.blind.in_blind or not (G.STATE == G.STATES.SELECTING_HAND or G.STATE == G.STATES.HAND_PLAYED or G.STATE == G.STATES.DRAW_TO_HAND) then
 				return true
 			end
 
@@ -815,8 +799,14 @@ local function action_set_score(score)
 						func = function()
 							score_waiting = false
 
-							print("Setting score to " .. tostring(String_to_number(score)))
-							G.GAME.chips = String_to_number(score)
+							if not G.GAME.blind.in_blind or not (G.STATE == G.STATES.SELECTING_HAND or G.STATE == G.STATES.HAND_PLAYED or G.STATE == G.STATES.DRAW_TO_HAND) then
+								return true
+							end
+
+							print("Setting score to " .. tostring(String_to_number(score)) .. " is lower than current score of " .. tostring(G.GAME.chips) .. "? " .. ((String_to_number(score) < G.GAME.chips) and "true" or "false"))
+							if String_to_number(score) > G.GAME.chips then
+								G.GAME.chips = String_to_number(score)
+							end
 							print ("Setting last score to " .. tostring(G.GAME.chips))
 							MP.GAME.last_score = G.GAME.chips
 

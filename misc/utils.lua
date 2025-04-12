@@ -403,3 +403,16 @@ function MP.UTILS.init_reverse_increment_array(min, max, step, stringify_keys)
 
 	return reversed
 end
+
+
+-- Stuff missing from G.FUNCS for some reason
+MP.UTILS.draw_from_play_to_deck = function()
+    local play_count = #G.play.cards
+    local it = 1
+    for k, v in ipairs(G.play.cards) do
+        if (not v.shattered) and (not v.destroyed) then 
+            draw_card(G.play, G.deck, it*100/play_count, 'down', false, v)
+            it = it + 1
+        end
+    end
+  end

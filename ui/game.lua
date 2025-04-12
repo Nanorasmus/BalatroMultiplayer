@@ -875,51 +875,51 @@ function Game:update_hand_played(dt)
 	end
 
 	-- Ignore for singleplayer or regular blinds
-	if not MP.LOBBY.connected or not MP.LOBBY.code or (not MP.is_pvp_boss() and MP.LOBBY.config.nano_br_mode ~= "hivemind")  then
+	if not MP.LOBBY.connected or not MP.LOBBY.code or (not MP.is_pvp_boss() and MP.LOBBY.config.nano_br_mode ~= "hivemind" and not MP.GAME.end_pvp) then
 		update_hand_played_ref(self, dt)
 		return
 	end
 
-	if self.buttons then
-		self.buttons:remove()
-		self.buttons = nil
-	end
-	if self.shop then
-		self.shop:remove()
-		self.shop = nil
-	end
+	if not MP.GAME.end_pvp then
+		if self.buttons then
+			self.buttons:remove()
+			self.buttons = nil
+		end
+		if self.shop then
+			self.shop:remove()
+			self.shop = nil
+		end
 
-	if not G.STATE_COMPLETE then
-		G.STATE_COMPLETE = true
-		G.E_MANAGER:add_event(Event({
-			trigger = "immediate",
-			func = function()
-				-- Set blind chips to enemy score
-				if G.GAME.blind and MP.is_pvp_boss() then
-					if MP.GAME.enemies["house"] then
-						G.GAME.blind.chip_text = MP.INSANE_INT.to_string(MP.GAME.enemies["house"].score)
-					elseif MP.GAME.enemies[MP.LOBBY.enemy_id] then
-						G.GAME.blind.chip_text = MP.INSANE_INT.to_string(MP.GAME.enemies[MP.LOBBY.enemy_id].score)
+		if not G.STATE_COMPLETE then
+			G.STATE_COMPLETE = true
+			G.E_MANAGER:add_event(Event({
+				trigger = "immediate",
+				func = function()
+					-- Set blind chips to enemy score
+					if G.GAME.blind and MP.is_pvp_boss() then
+						if MP.GAME.enemies["house"] then
+							G.GAME.blind.chip_text = MP.INSANE_INT.to_string(MP.GAME.enemies["house"].score)
+						elseif MP.GAME.enemies[MP.LOBBY.enemy_id] then
+							G.GAME.blind.chip_text = MP.INSANE_INT.to_string(MP.GAME.enemies[MP.LOBBY.enemy_id].score)
+						end
 					end
-				end
-				-- For now, never advance to next round
-				if G.GAME.current_round.hands_left < 1 then
-					MP.UI.show_message(localize("k_wait_enemy"))
+					-- For now, never advance to next round
+					if G.GAME.current_round.hands_left < 1 then
+						MP.UI.show_message(localize("k_wait_enemy"))
 
-					if G.hand.cards[1] then
-						eval_hand_and_jokers()
-						G.FUNCS.draw_from_hand_to_discard()
+						if G.hand.cards[1] then
+							eval_hand_and_jokers()
+							G.FUNCS.draw_from_hand_to_discard()
+						end
+					elseif not MP.GAME.end_pvp then
+						G.STATE_COMPLETE = false
+						G.STATE = G.STATES.DRAW_TO_HAND
 					end
-				elseif not MP.GAME.end_pvp then
-					G.STATE_COMPLETE = false
-					G.STATE = G.STATES.DRAW_TO_HAND
-				end
-				return true
-			end,
-		}))
-	end
-
-	if MP.GAME.end_pvp then
+					return true
+				end,
+			}))
+		end
+	else
 		G.STATE_COMPLETE = false
 		G.STATE = G.STATES.NEW_ROUND
 		G.GAME.blind.in_blind = false
@@ -1746,7 +1746,6 @@ function Game:update_selecting_hand(dt)
 		if not MP.is_pvp_boss() then
 			G.STATE_COMPLETE = false
 			G.STATE = G.STATES.NEW_ROUND
-			G.GAME.blind.in_blind = false
 		else
 			G.STATE_COMPLETE = false
 			G.STATE = G.STATES.HAND_PLAYED
@@ -1759,7 +1758,6 @@ function Game:update_selecting_hand(dt)
 		G.hand:unhighlight_all()
 		G.STATE_COMPLETE = false
 		G.STATE = G.STATES.NEW_ROUND
-		G.GAME.blind.in_blind = false
 		MP.GAME.end_pvp = false
 	end
 end
@@ -1783,6 +1781,9 @@ function Blind:disable()
 end
 
 G.FUNCS.multiplayer_blind_chip_UI_scale = function(e)
+
+	local score_player_id = MP.LOBBY.player_id
+
 	if MP.LOBBY.config.nano_br_mode == "nemesis" then
 		if not MP.LOBBY.enemy_id or not MP.GAME.enemies[MP.LOBBY.enemy_id] then
 			return
@@ -1792,27 +1793,25 @@ G.FUNCS.multiplayer_blind_chip_UI_scale = function(e)
 			return
 		end
 
-		if not MP.INSANE_INT.greater_than(MP.GAME.enemies[MP.LOBBY.enemy_id].score, MP.INSANE_INT.create(0, G.E_SWITCH_POINT, 0)) then
-			e.config.scale = scale_number(MP.GAME.enemies[MP.LOBBY.enemy_id].score.coeffiocient, 0.7, 100000)
-		end
-		
-		local new_score_text = MP.INSANE_INT.to_string(MP.GAME.enemies[MP.LOBBY.enemy_id].score)
-		if G.GAME.blind and MP.GAME.enemies[MP.LOBBY.enemy_id].score_text ~= new_score_text then
-			MP.GAME.enemies[MP.LOBBY.enemy_id].score_text = new_score_text
-		end
+		score_player_id = MP.LOBBY.enemy_id
 	elseif MP.LOBBY.config.nano_br_mode == "potluck" or MP.LOBBY.config.nano_br_mode == "hivemind" then
 		if not MP.GAME.enemies["house"].score then
 			return
 		end
 
-		if not MP.INSANE_INT.greater_than(MP.GAME.enemies["house"].score, MP.INSANE_INT.create(0, G.E_SWITCH_POINT, 0)) then
-			e.config.scale = scale_number(MP.GAME.enemies["house"].score.coeffiocient, 0.7, 100000)
-		end
+		score_player_id = "house"
+	end
+
+	
+	local score = MP.GAME.enemies[score_player_id].score
+
+	if not MP.INSANE_INT.greater_than(score, MP.INSANE_INT.create(0, G.E_SWITCH_POINT, 0)) then
+		e.config.scale = scale_number(score.coeffiocient, 0.7, 100000)
+	end
 		
-		local new_score_text = MP.INSANE_INT.to_string(MP.GAME.enemies["house"].score)
-		if G.GAME.blind and MP.GAME.enemies["house"].score_text ~= new_score_text then
-			MP.GAME.enemies["house"].score_text = new_score_text
-		end
+	local new_score_text = MP.INSANE_INT.to_string(score)
+	if G.GAME.blind and MP.GAME.enemies[score_player_id].score_text ~= new_score_text then
+		MP.GAME.enemies[score_player_id].score_text = new_score_text
 	end
 end
 
