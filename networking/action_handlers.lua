@@ -1027,6 +1027,9 @@ function MP.ACTIONS.play_hand(score, hands_left)
 	MP.GAME.score_offset = to_big(0)
 
 	-- Do the same for the score delta
+	if score < to_big(MP.GAME.last_score) then
+		MP.GAME.last_score = 0
+	end
 	local score_delta = process_number(score - to_big(MP.GAME.last_score))
 	MP.GAME.last_score = to_big(score)
 	MP.GAME.calculating_hand = false

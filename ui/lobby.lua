@@ -1048,6 +1048,7 @@ end
 
 function G.FUNCS.nano_br_mode_hivemind()
 	MP.LOBBY.config.nano_br_mode = "hivemind"
+	MP.LOBBY.config.multiplayer_jokers = false
 	send_lobby_options()
 	G.FUNCS.lobby_options()
 end
