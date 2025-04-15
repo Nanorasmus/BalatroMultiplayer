@@ -135,21 +135,26 @@ end
 local function action_start_blind()
 	MP.GAME.ready_blind = false
 	MP.GAME.ready_pvp_blind = false
-	MP.GAME.timer_started = false
-	MP.GAME.timer = 120
 
 	if MP.GAME.next_blind_context then
+		if MP.is_key_pvp_blind(MP.GAME.next_blind_context.config.ref_table.key) then
+			MP.GAME.timer_started = false
+			MP.GAME.timer = 120
+		end
+
 		G.FUNCS.select_blind(MP.GAME.next_blind_context)
 
 		-- Re-end timer after half a second in case opponent started it as we readied up
-		G.E_MANAGER:add_event(Event({
-			trigger = "after",
-			time = 0.5,
-			func = function()
-				MP.GAME.timer_started = false
-				return true
-			end
-		}))
+		if MP.is_key_pvp_blind(MP.GAME.next_blind_context.config.ref_table.key) then
+			G.E_MANAGER:add_event(Event({
+				trigger = "after",
+				time = 0.5,
+				func = function()
+					MP.GAME.timer_started = false
+					return true
+				end
+			}))
+		end
 	else
 		sendErrorMessage("No next blind context", "MULTIPLAYER")
 	end
