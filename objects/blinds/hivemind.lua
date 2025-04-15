@@ -28,7 +28,6 @@ local create_playing_card_ref = create_playing_card
 function create_playing_card(card_init, area, skip_materialize, silent, colours, skip_emplace)
 	local card = create_playing_card_ref(card_init, area, skip_materialize, silent, colours, skip_emplace)
 	if MP.is_team_based() then
-		print("Instantly creating a card! " .. (MP.LOBBY.code and "TRUE" or "FALSE") .. (MP.LOBBY.is_started and "TRUE" or "FALSE") .. (MP.GAME.setting_deck and "TRUE" or "FALSE") .. (area and "TRUE" or "FALSE") .. ", " .. (area == G.deck and "TRUE" or "FALSE") .. ", " .. (area == G.hand and "TRUE" or "FALSE") .. ", " .. (area == G.discard and "TRUE" or "FALSE") .. ", " .. (area == G.play and "TRUE" or "FALSE"))
 		if MP and MP.LOBBY.code and MP.LOBBY.is_started and not MP.GAME.setting_deck and area and (area == G.deck or area == G.hand or area == G.discard or area == G.play) then
 			MP.ACTIONS.add_card(card)
 		end

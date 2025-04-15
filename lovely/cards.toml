@@ -83,8 +83,7 @@ target = "card.lua"
 pattern = '''function Card:change_suit(new_suit)
     local new_code = SMODS.Suits[new_suit].card_key'''
 position = 'after'
-payload = '''print("SUIT BEING CHANGED! " .. (new_code and "TRUE" or "FALSE") .. (MP.LOBBY and "TRUE" or "FALSE") .. (MP.GAME.setting_deck and "TRUE" or "FALSE"))
-if MP and new_code and MP.LOBBY.code and MP.LOBBY.is_started and not MP.GAME.setting_deck and (self.area == G.deck or self.area == G.hand or self.area == G.discard or self.area == G.play) then
+payload = '''if MP and new_code and MP.LOBBY.code and MP.LOBBY.is_started and not MP.GAME.setting_deck and (self.area == G.deck or self.area == G.hand or self.area == G.discard or self.area == G.play) then
 MP.ACTIONS.set_card_suit(self, new_code)
 end'''
 match_indent = true
@@ -120,8 +119,7 @@ target = "card.lua"
 pattern = '''
 function Card:add_to_deck(from_debuff)'''
 position = 'after'
-payload = '''print("Creating a card!")
-if MP and MP.LOBBY.code and MP.LOBBY.is_started and not MP.GAME.setting_deck then
+payload = '''if MP and MP.LOBBY.code and MP.LOBBY.is_started and not MP.GAME.setting_deck then
 MP.ACTIONS.add_card(self)
 end'''
 match_indent = true
@@ -135,8 +133,7 @@ target = "card.lua"
 pattern = '''function Card:remove()
     self.removed = true'''
 position = 'after'
-payload = '''print("Destroying a card!")
-if MP and MP.LOBBY.code and MP.LOBBY.is_started and not MP.GAME.setting_deck and (self.area == G.deck or self.area == G.hand or self.area == G.discard or self.area == G.play) then
+payload = '''if MP and MP.LOBBY.code and MP.LOBBY.is_started and not MP.GAME.setting_deck and (self.area == G.deck or self.area == G.hand or self.area == G.discard or self.area == G.play) then
 MP.ACTIONS.remove_card(self)
 end'''
 match_indent = true

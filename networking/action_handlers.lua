@@ -429,7 +429,6 @@ local function action_set_deck(deck_str)
 	G.deck.cards = {}
 
 	for _, card in ipairs(G.discard.cards) do
-		print("Removing from discard")
 		card:remove_from_deck()
 		card.area:remove_card(card)
 		card:remove()
@@ -437,7 +436,6 @@ local function action_set_deck(deck_str)
 	G.discard.cards = {}
 
 	for _, card in ipairs(G.hand.cards) do
-		print("Removing from hand")
 		card:remove_from_deck()
 		card.area:remove_card(card)
 		card:remove()
@@ -445,7 +443,6 @@ local function action_set_deck(deck_str)
 	G.hand.cards = {}
 
 	for _, card in ipairs(G.play.cards) do
-		print("Removing from play")
 		card:remove_from_deck()
 		card.area:remove_card(card)
 		card:remove()
@@ -469,8 +466,6 @@ local function action_set_deck(deck_str)
 			goto continue
 		end
 		local card_params = MP.UTILS.string_split(card_str, "-")
-
-		print(card_params[1], card_params[2], card_params[3], card_params[4], card_params[5], card_params[6])
 
 		local id = card_params[1]
 
@@ -499,7 +494,6 @@ local function action_set_deck(deck_str)
 	end
 
 	MP.GAME.setting_deck = false
-	print("Done!")
 end
 
 local function action_set_hand_level(hand, level)
@@ -817,11 +811,9 @@ local function action_set_score(score)
 								return true
 							end
 
-							print("Setting score to " .. tostring(String_to_number(score)) .. " is lower than current score of " .. tostring(G.GAME.chips) .. "? " .. ((String_to_number(score) < G.GAME.chips) and "true" or "false"))
 							if String_to_number(score) > G.GAME.chips then
 								G.GAME.chips = String_to_number(score)
 							end
-							print ("Setting last score to " .. tostring(G.GAME.chips))
 							MP.GAME.last_score = G.GAME.chips
 
 							G.GAME.chips_text = tostring(G.GAME.chips)
@@ -1123,7 +1115,6 @@ function MP.ACTIONS.send_deck()
 	if string.len(deck_str) > 0 then
 		Client.send(string.format("action:sendDeck,deck:%s", deck_str))
 	end
-	print("Done!")
 end
 
 function MP.ACTIONS.set_card_suit(card, suit)
@@ -1157,7 +1148,6 @@ function MP.ACTIONS.set_card_seal(card, seal)
 end
 
 function MP.ACTIONS.add_card(card)
-	print("MP trying to send add_card!")
 	if MP.is_team_based() and card.playing_card then
 		Client.send(string.format("action:addCard,card:%s", card_to_string(card, true)))
 	end
