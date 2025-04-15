@@ -90,6 +90,7 @@ function MP.reset_game_states()
 	sendDebugMessage("Resetting game states", "MULTIPLAYER")
 	MP.GAME = {
 		ready_blind = false,
+		ready_pvp_blind = false,
 		ready_blind_text = localize("b_ready"),
 		processed_round_done = false,
 		lives = 0,
@@ -113,6 +114,7 @@ function MP.reset_game_states()
 		last_score = 0,
 		pre_calc_score = 0,
 		calculating_hand = false,
+		score_waiting = false,
 		score_offset = 0,
 		setting_deck = false,
 	}

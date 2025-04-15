@@ -134,6 +134,7 @@ end
 
 local function action_start_blind()
 	MP.GAME.ready_blind = false
+	MP.GAME.ready_pvp_blind = false
 	MP.GAME.timer_started = false
 	MP.GAME.timer = 120
 
@@ -286,11 +287,12 @@ end
 
 local function action_end_blind()
 	G.E_MANAGER:add_event(Event({
-		trigger = "immediate",
+		trigger = "after",
+		delay = 0.5,
 		blockable = false,
 		blocking = false,
 		func = function()
-			if MP.GAME.calculating_hand then
+			if MP.GAME.calculating_hand or MP.GAME.score_waiting then
 				return false
 			end
 
@@ -410,6 +412,7 @@ local function action_set_deck_type(back, sleeve, stake)
 end
 
 local function action_set_deck(deck_str)
+
 	MP.GAME.setting_deck = true
 	-- Clear current deck
 	for _, card in ipairs(G.deck.cards) do
@@ -767,9 +770,9 @@ local function action_start_ante_timer(time)
 	G.E_MANAGER:add_event(MP.timer_event)
 end
 
-local score_waiting = false
+
 local function action_set_score(score)
-	if MP.GAME.calculating_hand then
+	if MP.GAME.calculating_hand and G.GAME.blind.in_blind then
 		MP.GAME.score_offset = (to_big(MP.GAME.pre_calc_score) - G.GAME.chips) + (String_to_number(score) - G.GAME.chips)
 	end
 
@@ -778,9 +781,9 @@ local function action_set_score(score)
 		blockable = false,
 		blocking = false,
 		func = function()
-			if score_waiting == true then
+			if MP.GAME.score_waiting == true then
 				if not (G.STATE == G.STATES.SELECTING_HAND or G.STATE == G.STATES.HAND_PLAYED or G.STATE == G.STATES.DRAW_TO_HAND) then
-					score_waiting = false
+					MP.GAME.score_waiting = false
 				end
 				return false
 			end
@@ -789,7 +792,7 @@ local function action_set_score(score)
 				return true
 			end
 
-			score_waiting = true
+			MP.GAME.score_waiting = true
 					
 			-- Handle offset if local hand is still calculating
 
@@ -808,7 +811,7 @@ local function action_set_score(score)
 						blockable = false,
 						blocking = false,
 						func = function()
-							score_waiting = false
+							MP.GAME.score_waiting = false
 
 							if not G.GAME.blind.in_blind or not (G.STATE == G.STATES.SELECTING_HAND or G.STATE == G.STATES.HAND_PLAYED or G.STATE == G.STATES.DRAW_TO_HAND) then
 								return true
@@ -841,6 +844,7 @@ local function skip_blind_internal()
 	-- Unready if ready
 	if MP.GAME.ready_blind then
 		MP.GAME.ready_blind = false
+		MP.GAME.ready_pvp_blind = false
 		MP.GAME.ready_blind_text = MP.GAME.ready_blind and localize("b_unready") or localize("b_ready")
 
 		MP.ACTIONS.set_location("loc_selecting")
@@ -864,6 +868,10 @@ local function skip_blind_internal()
 
 	if blind == nil then
 		return
+	end
+
+	if not MP.GAME.timer_started then
+		MP.GAME.timer = MP.GAME.timer + 120
 	end
 
     stop_use()
@@ -974,10 +982,14 @@ end
 
 function MP.ACTIONS.ready_blind(e)
 	MP.GAME.next_blind_context = e
-	Client.send(string.format("action:readyBlind,isPVP:%s", e.config.ref_table.key == "bl_mp_hivemind"))
+	if MP.is_key_pvp_blind(e.config.ref_table.key) then
+		MP.GAME.ready_pvp_blind = true
+	end
+	Client.send(string.format("action:readyBlind,isPVP:%s", MP.is_key_pvp_blind(e.config.ref_table.key)))
 end
 
 function MP.ACTIONS.unready_blind()
+	MP.GAME.ready_pvp_blind = false
 	Client.send("action:unreadyBlind")
 end
 

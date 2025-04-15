@@ -697,8 +697,12 @@ function G.FUNCS.mp_toggle_ready(e)
 	MP.GAME.ready_blind_text = MP.GAME.ready_blind and localize("b_unready") or localize("b_ready")
 
 	if MP.GAME.ready_blind then
-		MP.ACTIONS.set_location("loc_ready")
 		MP.ACTIONS.ready_blind(e)
+		if MP.GAME.ready_pvp_blind then
+			MP.ACTIONS.set_location("loc_ready_pvp")
+		else
+			MP.ACTIONS.set_location("loc_ready")
+		end
 	else
 		MP.ACTIONS.set_location("loc_selecting")
 		MP.ACTIONS.unready_blind()
@@ -767,6 +771,7 @@ local update_shop_ref = Game.update_shop
 function Game:update_shop(dt)
 	if not G.STATE_COMPLETE then
 		MP.GAME.ready_blind = false
+		MP.GAME.ready_pvp_blind = false
 		MP.GAME.ready_blind_text = localize("b_ready")
 		MP.GAME.end_pvp = false
 	end
@@ -1938,7 +1943,7 @@ function G.FUNCS.select_blind(e)
 	select_blind_ref(e)
 	if MP.LOBBY.code then
 		MP.GAME.ante_key = tostring(math.random())
-		MP.ACTIONS.play_hand(0, G.GAME.round_resets.hands)
+		MP.ACTIONS.play_hand(to_big(0), G.GAME.round_resets.hands)
 		MP.ACTIONS.new_round()
 		MP.ACTIONS.set_location("loc_playing-" .. (e.config.ref_table.key or e.config.ref_table.name))
 		hide_enemy_location()

@@ -31,5 +31,9 @@ function MP.is_blind_pvp_boss(blind)
 	if not blind then
 		return false
 	end
-	return blind.config.blind.key == "bl_mp_nemesis" or blind.config.blind.key == "bl_mp_potluck" or blind.config.blind.key == "bl_mp_hivemind"
+	return MP.is_key_pvp_blind(blind.config.blind.key)
+end
+
+function MP.is_key_pvp_blind(key)
+	return key == "bl_mp_nemesis" or key == "bl_mp_potluck" or key == "bl_mp_hivemind"
 end

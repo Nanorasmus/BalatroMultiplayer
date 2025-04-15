@@ -488,7 +488,7 @@ function ease_round(mod)
 end
 
 function G.FUNCS.mp_timer_button(e)
-	if not MP.GAME.timer_started and MP.GAME.ready_blind and G.GAME.round_resets.blind_states['Boss'] == 'Current' then
+	if not MP.GAME.timer_started and MP.GAME.ready_pvp_blind then
 		MP.ACTIONS.start_ante_timer()
 	end
 end
@@ -558,7 +558,7 @@ function G.FUNCS.set_timer_box(e)
 		e.children[1].config.object.colours = { G.C.IMPORTANT }
 		return
 	end
-	if not MP.GAME.timer_started and MP.GAME.ready_blind and G.GAME.round_resets.blind_states['Boss'] == 'Current' then
+	if not MP.GAME.timer_started and MP.GAME.ready_pvp_blind then
 		e.config.colour = G.C.IMPORTANT
 		e.children[1].config.object.colours = { G.C.UI.TEXT_LIGHT }
 		return
@@ -582,7 +582,7 @@ MP.timer_event = Event({
 		MP.GAME.timer = MP.GAME.timer - 1
 		if MP.GAME.timer <= 0 then
 			MP.GAME.timer = 0
-			if not MP.GAME.ready_blind then
+			if not MP.GAME.ready_pvp_blind then
 				MP.ACTIONS.fail_timer()
 			end
 			return true

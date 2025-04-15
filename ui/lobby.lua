@@ -1236,8 +1236,7 @@ function G.UIDEF.create_UIBox_unstuck()
 							label = { localize("b_unstuck_arcana") },
 							button = "mp_unstuck_arcana",
 							minw = 5,
-						}),
-						UIBox_button({ label = { localize("b_unstuck_blind") }, button = "mp_unstuck_blind", minw = 5 }),
+						})
 					},
 				},
 			},
@@ -1256,7 +1255,11 @@ function G.FUNCS.mp_unstuck_arcana()
 end
 
 function G.FUNCS.mp_unstuck_blind()
-	MP.GAME.ready_blind = false
+	if not MP.GAME.ready_blind then
+		return
+	end
+
+	MP.GAME.ready_pvp_blind = false
 	if MP.GAME.next_blind_context then
 		G.FUNCS.select_blind(MP.GAME.next_blind_context)
 	else
