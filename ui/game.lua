@@ -933,6 +933,10 @@ function Game:update_hand_played(dt)
 			}))
 		end
 	else
+		if MP.GAME.calculating_hand then
+			return
+		end
+		
 		G.STATE_COMPLETE = false
 		G.STATE = G.STATES.NEW_ROUND
 		G.GAME.blind.in_blind = false
