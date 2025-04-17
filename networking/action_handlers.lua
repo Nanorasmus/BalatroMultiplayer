@@ -133,19 +133,25 @@ local function action_start_game(seed, stake_str)
 end
 
 local function action_start_blind()
+	if MP.GAME.in_blind then
+		return
+	end
+
+	local is_pvp = MP.GAME.ready_pvp_blind
+
 	MP.GAME.ready_blind = false
 	MP.GAME.ready_pvp_blind = false
 
 	if MP.GAME.next_blind_context then
-		if MP.is_key_pvp_blind(MP.GAME.next_blind_context.config.ref_table.key) then
+
+		G.FUNCS.select_blind(MP.GAME.next_blind_context, is_pvp)
+
+		
+		if is_pvp then
 			MP.GAME.timer_started = false
 			MP.GAME.timer = 120
-		end
 
-		G.FUNCS.select_blind(MP.GAME.next_blind_context)
-
-		-- Re-end timer after half a second in case opponent started it as we readied up
-		if MP.is_key_pvp_blind(MP.GAME.next_blind_context.config.ref_table.key) then
+			-- Re-end timer after half a second in case opponent started it as we readied up
 			G.E_MANAGER:add_event(Event({
 				trigger = "after",
 				time = 0.5,
@@ -920,6 +926,8 @@ local function action_skip_blind()
 		return
 	end
 
+	MP.GAME.ready_blocker = true
+
 	G.E_MANAGER:add_event(Event({
 		trigger = "immediate",
 		blocking = false,
@@ -928,11 +936,12 @@ local function action_skip_blind()
 			if G.STATE == G.STATES.BLIND_SELECT then
 				G.E_MANAGER:add_event(Event({
 					trigger = "after",
-					delay = 0.5,
+					delay = 0.7,
 					blocking = false,
 					blockable = false,
 					func = function()
 						skip_blind_internal()
+						MP.GAME.ready_blocker = false
 						return true
 					end
 				}))

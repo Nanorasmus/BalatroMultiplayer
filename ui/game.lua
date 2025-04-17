@@ -693,6 +693,10 @@ end
 
 function G.FUNCS.mp_toggle_ready(e)
 	sendTraceMessage("Toggling Ready", "MULTIPLAYER")
+	if MP.GAME.ready_blocker then
+		return
+	end
+
 	MP.GAME.ready_blind = not MP.GAME.ready_blind
 	MP.GAME.ready_blind_text = MP.GAME.ready_blind and localize("b_unready") or localize("b_ready")
 
@@ -774,6 +778,7 @@ function Game:update_shop(dt)
 		MP.GAME.ready_pvp_blind = false
 		MP.GAME.ready_blind_text = localize("b_ready")
 		MP.GAME.end_pvp = false
+		MP.GAME.in_blind = false
 	end
 	update_shop_ref(self, dt)
 end
@@ -941,6 +946,7 @@ function Game:update_hand_played(dt)
 		G.STATE = G.STATES.NEW_ROUND
 		G.GAME.blind.in_blind = false
 		MP.GAME.end_pvp = false
+		MP.GAME.in_blind = false
 		
 		G.E_MANAGER:add_event(Event({
 			trigger = "after",
@@ -972,6 +978,7 @@ function Game:update_new_round(dt)
 		G.FUNCS.draw_from_hand_to_deck()
 		G.FUNCS.draw_from_discard_to_deck()
 		MP.GAME.end_pvp = false
+		MP.GAME.in_blind = false
 	end
 	if MP.LOBBY.code and not G.STATE_COMPLETE then
 		-- Prevent player from losing
@@ -1776,6 +1783,7 @@ function Game:update_selecting_hand(dt)
 		G.STATE_COMPLETE = false
 		G.STATE = G.STATES.NEW_ROUND
 		MP.GAME.end_pvp = false
+		MP.GAME.in_blind = false
 	end
 end
 
@@ -1942,8 +1950,17 @@ function Game:update_blind_select(dt)
 end
 
 local select_blind_ref = G.FUNCS.select_blind
-function G.FUNCS.select_blind(e)
+function G.FUNCS.select_blind(e, is_pvp)
 	MP.GAME.prevent_eval = false
+	MP.GAME.end_pvp = false
+
+	MP.GAME.in_blind = true
+	if is_pvp then
+		MP.GAME.in_pvp_blind = true
+	else
+		MP.GAME.in_pvp_blind = false
+	end
+
 	select_blind_ref(e)
 	if MP.LOBBY.code then
 		MP.GAME.ante_key = tostring(math.random())

@@ -92,6 +92,8 @@ function MP.reset_game_states()
 		ready_blind = false,
 		ready_pvp_blind = false,
 		ready_blind_text = localize("b_ready"),
+		in_blind = false,
+		in_pvp_blind = false,
 		processed_round_done = false,
 		lives = 0,
 		loaded_ante = 0,
