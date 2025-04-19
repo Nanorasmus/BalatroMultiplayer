@@ -422,6 +422,36 @@ local function action_set_deck_type(back, sleeve, stake)
 	end
 end
 
+local function create_card(card_str)
+	if card_str == "" then
+		return
+	end
+	local card_params = MP.UTILS.string_split(card_str, "-")
+
+	local id = card_params[1]
+
+	local _suit = card_params[2]
+	local _rank = card_params[3]
+	
+	local enhancement = card_params[4]
+	local edition = card_params[5]
+	local seal = card_params[6]
+
+	local card = create_playing_card({front = G.P_CARDS[_suit..'_'.._rank], center = (enhancement == "none" and nil or G.P_CENTERS[enhancement])}, G.deck, true, true, nil, false)
+
+	if edition and edition ~= "none" then
+		local edition_object = {}
+		edition_object[edition] = true
+
+		card:set_edition(edition_object, true, true)
+	end
+	if seal ~= "none" then
+		card:set_seal(seal, true, true)
+	end
+
+	card.mp_id = id
+end
+
 local function action_set_deck(deck_str)
 
 	MP.GAME.setting_deck = true
@@ -473,39 +503,163 @@ local function action_set_deck(deck_str)
 	local card_strings = MP.UTILS.string_split(deck_str, "|")
 
 	for _, card_str in pairs(card_strings) do
-		if card_str == "" then
-			goto continue
-		end
-		local card_params = MP.UTILS.string_split(card_str, "-")
-
-		local id = card_params[1]
-
-		local _suit = card_params[2]
-		local _rank = card_params[3]
-		
-		local enhancement = card_params[4]
-		local edition = card_params[5]
-		local seal = card_params[6]
-
-		local card = create_playing_card({front = G.P_CARDS[_suit..'_'.._rank], center = (enhancement == "none" and nil or G.P_CENTERS[enhancement])}, G.deck, true, true, nil, false)
-
-		if edition and edition ~= "none" then
-			local edition_object = {}
-			edition_object[edition] = true
-
-			card:set_edition(edition_object, true, true)
-		end
-		if seal ~= "none" then
-			card:set_seal(seal, true, true)
-		end
-
-		card.mp_id = id
-		
-		::continue::
+		create_card(card_str)
 	end
 
 	MP.GAME.setting_deck = false
 end
+
+local function find_card_by_id(id)
+	for _, card in pairs(G.deck.cards) do
+		if card.mp_id == id then
+			return card
+		end
+	end
+	for _, card in pairs(G.discard.cards) do
+		if card.mp_id == id then
+			return card
+		end
+	end
+	for _, card in pairs(G.hand.cards) do
+		if card.mp_id == id then
+			return card
+		end
+	end
+	for _, card in pairs(G.play.cards) do
+		if card.mp_id == id then
+			return card
+		end
+	end
+
+	return nil
+end
+
+local function action_add_card(temp_id, card_str)
+	local card = find_card_by_id(temp_id)
+	if not card then
+		MP.GAME.setting_deck = true
+		create_card(card_str)
+		MP.GAME.setting_deck = false
+	else
+		card.mp_id = MP.UTILS.string_split(card_str, "-")[1]
+	end
+end
+
+local function action_remove_card(id, retry_count)
+	local card = find_card_by_id(id)
+
+	-- Remove if the card is found and in a valid play area
+	if card and card.area and card.area ~= G.play then
+		MP.GAME.setting_deck = true
+		card:remove_from_deck()
+		card.area:remove_card(card)
+		card:remove()
+		MP.GAME.setting_deck = false
+	else if not retry_count or retry_count < 10 then
+		retry_count = retry_count or 0
+
+		-- Increment the retry count if the card could not be found (AKA it is currently moving from one area to another)
+		-- This is also how we prevent an infinite loop in a case where a client is told to delete a non-existent card.
+		if not card or not card.area then
+			retry_count = retry_count + 1
+		end
+
+
+		G.E_MANAGER:add_event(Event({
+			trigger = "after",
+			delay = 0.2,
+			blockable = false,
+			blocking = false,
+			func = function()
+				action_remove_card(id, retry_count)
+				return true
+			end
+		}))
+		end
+	end
+	return true
+end
+
+local function action_copy_card(from_id, to_id)
+	local from_card = find_card_by_id(from_id)
+	local to_card = find_card_by_id(to_id)
+	if from_card and to_card then
+		MP.GAME.setting_deck = true
+		copy_card(from_card, to_card)
+		MP.GAME.setting_deck = false
+	end
+end
+
+local function action_set_card_suit(id, suit)
+	local card = find_card_by_id(id)
+	if card then
+		local rank_suffix = card.base.id == 14 and 2 or math.min(card.base.id+1, 14)
+		if rank_suffix < 10 then rank_suffix = tostring(rank_suffix)
+		elseif rank_suffix == 10 then rank_suffix = 'T'
+		elseif rank_suffix == 11 then rank_suffix = 'J'
+		elseif rank_suffix == 12 then rank_suffix = 'Q'
+		elseif rank_suffix == 13 then rank_suffix = 'K'
+		elseif rank_suffix == 14 then rank_suffix = 'A'
+		end
+
+		MP.GAME.setting_deck = true
+		card:set_base(G.P_CARDS[suit..'_'..rank_suffix])
+		MP.GAME.setting_deck = false
+	end
+end
+
+local function action_set_card_rank(id, rank)
+	local card = find_card_by_id(id)
+	if card then
+		local suit_prefix = string.sub(card.base.suit, 1, 1)
+		
+		MP.GAME.setting_deck = true
+		card:set_base(G.P_CARDS[suit_prefix..'_'..rank])
+		MP.GAME.setting_deck = false
+	end
+end
+
+local function action_set_card_enhancement(id, enhancement)
+	local card = find_card_by_id(id)
+	if card then
+		MP.GAME.setting_deck = true
+		card:set_ability(G.P_CENTERS[enhancement])
+		MP.GAME.setting_deck = false
+	end
+end
+
+local function action_set_card_edition(id, edition)
+	local card = find_card_by_id(id)
+	if card then
+		MP.GAME.setting_deck = true
+		if edition and edition ~= "none" then
+			local edition_object = {}
+			edition_object[string.sub(edition, 3)] = true
+	
+			card:set_edition(edition_object, true, true)
+		else 
+			card:set_edition(nil, true, true)
+		end
+		MP.GAME.setting_deck = false
+	end
+end
+
+local function action_set_card_seal(id, seal)
+	local card = find_card_by_id(id)
+	if card then
+		MP.GAME.setting_deck = true
+		
+		if seal ~= "none" then
+			card:set_seal(seal, true, true)
+		else
+			card:set_seal(nil, true, true)
+		end
+
+		MP.GAME.setting_deck = false
+	end
+end
+
+
 
 local function action_set_hand_level(hand, level)
 	if not G.GAME.hands[hand] or not level then
@@ -1131,6 +1285,12 @@ function MP.ACTIONS.send_deck()
 	end
 end
 
+function MP.ACTIONS.copy_card(from, to)
+	if MP.is_team_based() and from.playing_card and to.playing_card then
+		Client.send(string.format("action:copyCard,card:%s,target:%s", from.mp_id, to.mp_id))
+	end
+end
+
 function MP.ACTIONS.set_card_suit(card, suit)
 	if MP.is_team_based() and card.playing_card then
 		Client.send(string.format("action:setCardSuit,card:%s,suit:%s", card.mp_id, suit))
@@ -1325,6 +1485,22 @@ function Game:update(dt)
 				action_set_deck_type(parsedAction.back, parsedAction.sleeve, parsedAction.stake)
 			elseif parsedAction.action == "setDeck" then
 				action_set_deck(parsedAction.deck)
+			elseif parsedAction.action == "addCard" then
+				action_add_card(parsedAction.tempId, parsedAction.card)
+			elseif parsedAction.action == "removeCard" then
+				action_remove_card(parsedAction.card)
+			elseif parsedAction.action == "copyCard" then
+				action_copy_card(parsedAction.card, parsedAction.target)
+			elseif parsedAction.action == "setCardSuit" then
+				action_set_card_suit(parsedAction.card, parsedAction.suit)
+			elseif parsedAction.action == "setCardRank" then
+				action_set_card_rank(parsedAction.card, parsedAction.rank)
+			elseif parsedAction.action == "setCardEnhancement" then
+				action_set_card_enhancement(parsedAction.card, parsedAction.enhancement)
+			elseif parsedAction.action == "setCardEdition" then
+				action_set_card_edition(parsedAction.card, parsedAction.edition)
+			elseif parsedAction.action == "setCardSeal" then
+				action_set_card_seal(parsedAction.card, parsedAction.seal)
 			elseif parsedAction.action == "setHandLevel" then
 				action_set_hand_level(parsedAction.hand, parsedAction.level)
 			elseif parsedAction.action == "sendPhantom" then
