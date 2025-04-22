@@ -422,7 +422,7 @@ local function action_set_deck_type(back, sleeve, stake)
 	end
 end
 
-local function create_card(card_str)
+local function create_card_from_str(card_str)
 	if card_str == "" then
 		return
 	end
@@ -503,7 +503,7 @@ local function action_set_deck(deck_str)
 	local card_strings = MP.UTILS.string_split(deck_str, "|")
 
 	for _, card_str in pairs(card_strings) do
-		create_card(card_str)
+		create_card_from_str(card_str)
 	end
 
 	MP.GAME.setting_deck = false
@@ -538,7 +538,7 @@ local function action_add_card(temp_id, card_str)
 	local card = find_card_by_id(temp_id)
 	if not card then
 		MP.GAME.setting_deck = true
-		create_card(card_str)
+		create_card_from_str(card_str)
 		MP.GAME.setting_deck = false
 	else
 		card.mp_id = MP.UTILS.string_split(card_str, "-")[1]
@@ -634,7 +634,7 @@ local function action_set_card_edition(id, edition)
 		MP.GAME.setting_deck = true
 		if edition and edition ~= "none" then
 			local edition_object = {}
-			edition_object[string.sub(edition, 3)] = true
+			edition_object[edition] = true
 	
 			card:set_edition(edition_object, true, true)
 		else 
@@ -1299,7 +1299,7 @@ end
 
 function MP.ACTIONS.set_card_rank(card, rank)
 	if MP.is_team_based() and card.playing_card then
-		Client.send(string.format("action:setCardRank,card:%s,rank:%s", card.mp_id, rank))
+		Client.send(string.format("action:setCardRank,card:%s,rank:%s", card.mp_id, rank .. "-"))
 	end
 end
 
