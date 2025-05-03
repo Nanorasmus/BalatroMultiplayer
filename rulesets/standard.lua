@@ -53,23 +53,23 @@ SMODS.Joker({
 	config = { extra = 1, mp_sticker_balanced = true },
 	loc_vars = function(self, info_queue, card)
 		return { vars = {
-			card.ability.extra
-		}}
+			card.ability.extra,
+		} }
 	end,
 	calculate = function(self, card, context)
 		if context.cardarea == G.play and context.repetition then
 			if context.other_card == context.scoring_hand[1] then
 				return {
-					message = localize('k_again_ex'),
+					message = localize("k_again_ex"),
 					repetitions = card.ability.extra,
-					card = card
+					card = card,
 				}
 			end
 			if context.other_card == context.scoring_hand[2] then
 				return {
-					message = localize('k_again_ex'),
+					message = localize("k_again_ex"),
 					repetitions = card.ability.extra,
-					card = card
+					card = card,
 				}
 			end
 		end
@@ -79,32 +79,11 @@ SMODS.Joker({
 	end,
 })
 
-SMODS.Enhancement({
-	key = "glass",
-	no_collection = true,
-	config = {
-		Xmult = 1.5,
-		extra = 4,
-	},
-	shatters = true,
-	loc_vars = function(self, info_queue, card)
-		return { vars = {
-			card.ability.Xmult, 
-			G.GAME.probabilities.normal, 
-			card.ability.extra
-		}}
+SMODS.Enhancement:take_ownership("glass", {
+	set_ability = function(self, card, initial, delay_sprites)
+		local x = MP.LOBBY.config.ruleset == "ruleset_mp_standard" and (MP.LOBBY.code or MP.LOBBY.ruleset_preview) and 1.5 or 2
+		-- Xmult is display, x_mult is internal. don't ask why, i don't know
+		card.ability.Xmult = x
+		card.ability.x_mult = x
 	end,
-	pos = { x = 5, y = 1 },
-	in_pool = function(self)
-		return MP.LOBBY.config.ruleset == "ruleset_mp_standard" and MP.LOBBY.code
-	end,
-	calculate = function(self, card, context)
-		if context.destroy_card and context.cardarea == G.play  then
-			if pseudorandom('glass') < G.GAME.probabilities.normal/card.ability.extra then
-				return {
-					remove = true
-				}
-			end
-		end
-	end,
-})
+}, true)

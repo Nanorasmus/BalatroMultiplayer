@@ -1255,7 +1255,7 @@ local function card_to_string(card, reroll_id)
 	if card.mp_id and not reroll_id then
 		id = card.mp_id
 	else
-		id = "ID_" .. hash(card_str .. random_string(8, G.TIMERS.UPTIME) .. last_generated_id, 10000)
+		id = "ID_" .. hash(card_str .. random_string(10, G.TIMERS.UPTIME) .. last_generated_id, 1000000)
 		last_generated_id = id
 		card.mp_id = id
 	end
@@ -1274,7 +1274,7 @@ function MP.ACTIONS.send_deck()
 
 		deck_str = deck_str .. card_to_string(card)
 
-		if string.len(deck_str) > 1000 then
+		if string.len(deck_str) > 800 then
 			Client.send(string.format("action:sendDeck,deck:%s", deck_str))
 			deck_str = ""
 		end
