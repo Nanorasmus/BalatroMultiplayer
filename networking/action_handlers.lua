@@ -593,7 +593,7 @@ end
 local function action_set_card_suit(id, suit)
 	local card = find_card_by_id(id)
 	if card then
-		local rank_suffix = card.base.id == 14 and 2 or math.min(card.base.id+1, 14)
+		local rank_suffix = card.base.id
 		if rank_suffix < 10 then rank_suffix = tostring(rank_suffix)
 		elseif rank_suffix == 10 then rank_suffix = 'T'
 		elseif rank_suffix == 11 then rank_suffix = 'J'
